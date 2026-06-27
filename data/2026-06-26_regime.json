@@ -1,0 +1,59 @@
+{
+  "date": "2026-06-26",
+  "generated_at": "2026-06-28T01:11:50.673223+08:00",
+  "version": "5.0.0",
+  "market_regime": "downtrend_market",
+  "regime_label": "退潮市",
+  "regime_score": 4.2,
+  "strategy_mode": "defensive_mode",
+  "action": "REDUCE_ONLY",
+  "score_breakdown": {
+    "index_trend": {
+      "score": 0,
+      "label": "down_single"
+    },
+    "sector_breadth": {
+      "score": 1,
+      "label": "narrow"
+    },
+    "volume_expansion": {
+      "score": 1,
+      "label": "stable_single"
+    },
+    "leader_continuity": {
+      "score": 0,
+      "label": "broken"
+    },
+    "risk_sentiment": {
+      "score": 2,
+      "label": "optimistic"
+    }
+  },
+  "signals": {
+    "v1_signal_weight": 0.7,
+    "v3_leader_weight": 0.5,
+    "v4_risk_limit": 0.3,
+    "allow_breakout": false,
+    "allow_pullback": true,
+    "min_sector_score": 7,
+    "min_stock_score": 8
+  },
+  "recommendation": {
+    "action": "REDUCE_ONLY",
+    "comment": "多数板块退潮, 降仓防守, 不做突破追高"
+  },
+  "snapshot": {
+    "indices": {
+      "000001": -1.82,
+      "399001": -3.44,
+      "399006": -4.07,
+      "000688": -4.24,
+      "000016": -2.53,
+      "399005": -3.45,
+      "000852": 0.0
+    },
+    "limit_up": 1,
+    "limit_down": 0,
+    "market_status": "strong_bear"
+  }
+}

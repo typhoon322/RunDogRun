@@ -1,0 +1,56 @@
+{
+  "error": "insufficient_data",
+  "agent": {
+    "policy": {
+      "strong_bull": {
+        "best_action": "NO_ACTION",
+        "confidence": 0.5,
+        "q_values": {
+          "NO_ACTION": 0.009,
+          "DECREASE": 0.008,
+          "HOLD": 0.001
+        }
+      },
+      "mild_bull": {
+        "best_action": "NO_ACTION",
+        "confidence": 0.5,
+        "q_values": {
+          "NO_ACTION": 0.007,
+          "HOLD": 0.001,
+          "SELL": 0.0
+        }
+      },
+      "neutral": {
+        "best_action": "DECREASE",
+        "confidence": 0.5,
+        "q_values": {
+          "DECREASE": 0.004,
+          "BUY": 0.003,
+          "HOLD": -0.002
+        }
+      },
+      "mild_bear": {
+        "best_action": "NO_ACTION",
+        "confidence": 0.5,
+        "q_values": {
+          "NO_ACTION": 0.009,
+          "SELL": 0.007,
+          "INCREASE": 0.007
+        }
+      },
+      "strong_bear": {
+        "best_action": "NO_ACTION",
+        "confidence": 0.5,
+        "q_values": {
+          "NO_ACTION": 0.006,
+          "SELL": 0.003,
+          "INCREASE": -0.002
+        }
+      }
+    },
+    "risk_preference": 0.8,
+    "aggression_level": 0.1,
+    "train_steps": 0,
+    "avg_reward": 0
+  }
+}

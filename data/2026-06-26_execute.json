@@ -1,0 +1,24 @@
+{
+  "date": "2026-06-26",
+  "generated_at": "2026-06-28T00:13:11.998404+08:00",
+  "version": "4.0.0",
+  "market_state": "risk_off",
+  "risk_mode": "defensive",
+  "leader_stock": null,
+  "all_positions": [],
+  "risk_control": {
+    "market_state": "risk_off",
+    "risk_mode": "defensive",
+    "total_exposure": 0,
+    "max_allowed_exposure": 0.2,
+    "drawdown": 0.0,
+    "drawdown_action": "正常",
+    "consecutive_losses": 0
+  },
+  "summary": {
+    "total_candidates": 0,
+    "leaders_found": 0,
+    "main_trend_count": 0,
+    "accumulation_count": 0
+  }
+}

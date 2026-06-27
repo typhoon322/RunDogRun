@@ -1,0 +1,22 @@
+{
+  "daily_values": [
+    {
+      "date": "2026-06-26",
+      "total_value": 1.0
+    },
+    {
+      "date": "2026-06-26",
+      "total_value": 1.0
+    },
+    {
+      "date": "2026-06-26",
+      "total_value": 1.0
+    },
+    {
+      "date": "2026-06-26",
+      "total_value": 1.0
+    }
+  ],
+  "total_trades": 0,
+  "consecutive_losses": 0
+}

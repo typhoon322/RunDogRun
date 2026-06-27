@@ -1,0 +1,19 @@
+{
+  "date": "2026-06-26",
+  "generated_at": "2026-06-28T01:11:50.668979+08:00",
+  "version": "1.4.0",
+  "positions": [],
+  "portfolio_risk": {
+    "total_exposure": 0,
+    "max_sector_exposure": 0.0,
+    "position_count": 0,
+    "risk_state": "controlled",
+    "warnings": []
+  },
+  "summary": {
+    "total_signals": 0,
+    "entry_count": 0,
+    "hold_count": 0,
+    "exit_count": 0
+  }
+}
