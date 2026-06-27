@@ -71,6 +71,17 @@ def compute_adaptive_weights(
     weights["v1_signal"] = round(weights["v1_signal"] * regime_modifier, 2)
     weights["v3_leader"] = round(weights["v3_leader"] * regime_modifier, 2)
 
+    # ── v3 ↔ v6 联动 ──
+    # 强共振时 v3 权重放大 1.3x, 允许激进入场
+    if alignment in ("strong_alignment", "triple_align"):
+        weights["v3_leader"] = round(weights["v3_leader"] * 1.3, 2)
+        weights["v3_link"] = "aggressive"
+    elif alignment in ("conflict", "flat"):
+        weights["v3_leader"] = round(weights["v3_leader"] * 0.5, 2)
+        weights["v3_link"] = "filtered"
+    else:
+        weights["v3_link"] = "normal"
+
     # 共振权重: 用于整体系统信号放大/缩小
     resonance_weight = weights["v3_leader"]
 

@@ -1,6 +1,6 @@
 {
   "date": "2026-06-28",
-  "generated_at": "2026-06-28T01:36:29.314292+08:00",
+  "generated_at": "2026-06-28T01:39:50.309557+08:00",
   "version": "6.0.0",
   "market": {
     "indices": [
@@ -796,10 +796,11 @@
   "regime_score": 3.3,
   "strategy_mode": "liquidation_mode",
   "resonance": {
-    "score": 0.0,
+    "score": 0.118,
     "label": "conflict",
-    "resonant_sectors": 0,
-    "total_sectors": 100
+    "strong_count": 0,
+    "moderate_count": 0,
+    "total": 20
   },
   "adaptive_weights": {
     "v1_signal": 0.0,
