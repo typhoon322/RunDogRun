@@ -1,10 +1,10 @@
 {
   "last_run": "2026-06-26",
-  "market_regime": "downtrend_market",
+  "market_regime": "crash_market",
   "resonance": "conflict",
   "current_exposure": 0.0,
   "signal_history": [],
-  "total_runs": 2,
-  "regime_score": 4.2,
+  "total_runs": 5,
+  "regime_score": 3.3,
   "resonance_score": 0.0
 }

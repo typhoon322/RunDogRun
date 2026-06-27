@@ -1,5 +1,5 @@
 {
-  "date": "2026-06-26",
+  "date": "2026-06-28",
   "resonance": {
     "score": 0.0,
     "label": "conflict",
@@ -12,7 +12,7 @@
     "v4_risk_limit": 0.15,
     "v6_resonance_weight": 0.0,
     "alignment": "conflict",
-    "regime_modifier": 0.3,
+    "regime_modifier": 0.8,
     "description": "周期冲突, 禁止交易"
   },
   "sector_resonance": {

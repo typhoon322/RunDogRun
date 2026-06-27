@@ -1,14 +1,14 @@
 {
-  "date": "2026-06-26",
-  "generated_at": "2026-06-28T01:20:40.452157+08:00",
+  "date": "2026-06-28",
+  "generated_at": "2026-06-28T01:20:14.096431+08:00",
   "version": "1.4.0",
+  "error": "data_not_found",
   "positions": [],
   "portfolio_risk": {
-    "total_exposure": 0,
+    "total_exposure": 0.0,
     "max_sector_exposure": 0.0,
     "position_count": 0,
-    "risk_state": "controlled",
-    "warnings": []
+    "risk_state": "unknown"
   },
   "summary": {
     "total_signals": 0,

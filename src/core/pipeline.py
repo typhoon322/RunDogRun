@@ -1,26 +1,28 @@
 """
-pipeline.py — v6 主流程编排器
-==============================
-严格顺序执行: v1 → v2 → v1.2 → v1.3 → v1.4 → v5 → v6 → output
+pipeline.py — v1→v8 主流程编排器
+==================================
+严格顺序执行: v1 → v2 → v1.2 → v1.3 → v1.4 → v5 → v6 → v7 → v8 → output
 """
 import json
-import logging
 import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import config
-from src.utils import setup_logging
+from src.utils.logger import get_logger
 from src.core.context import Context
+from src.output.builder import build_output, save_output, save_latest, Result
 
-logger = logging.getLogger("quant.engine.pipeline")
+logger = get_logger("quant.engine.pipeline")
 
 
-def run(date_str: str, data_dir: str = config.DATA_DIR) -> dict[str, Any]:
-    """
-    执行完整 v1-v6 管道。
-    """
+def run(date_str: str = None, data_dir: str = None) -> Result:
+    """执行完整 v1-v8 管道, 返回 Result 对象"""
+    if date_str is None:
+        date_str = config.today_cn()
+    if data_dir is None:
+        data_dir = config.DATA_DIR
     ctx = Context(date_str, data_dir)
     logger.info("=" * 55)
     logger.info(f"v6 Pipeline 启动: {date_str}")
@@ -175,7 +177,7 @@ def run(date_str: str, data_dir: str = config.DATA_DIR) -> dict[str, Any]:
                 f"quality={quality['data_quality']}")
     logger.info("=" * 55)
 
-    return output
+    return Result(output)
 
 
 def _safe_json_write(path: Path, data: dict) -> None:

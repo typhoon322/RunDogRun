@@ -65,3 +65,31 @@ def save_latest(output: dict, data_dir: str = "data/outputs") -> str:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     return str(path)
+
+
+class Result:
+    """标准化输出结果包装器 — 可 save() + summary()"""
+    def __init__(self, data: dict):
+        self.data = data
+
+    def save(self, path: str = "data/outputs/latest.json") -> str:
+        from pathlib import Path
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        import json
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.data, f, ensure_ascii=False, indent=2)
+        return path
+
+    def summary(self) -> dict:
+        d = self.data
+        return {
+            "date": d.get("date", ""),
+            "v5_regime": d.get("market_regime", d.get("v5_regime", "unknown")),
+            "v6_resonance": d.get("resonance", {}).get("label", d.get("v6_resonance", "flat")),
+            "strategy_mode": d.get("strategy_mode", "unknown"),
+            "data_quality": d.get("data_quality", "ok"),
+        }
+
+    def __repr__(self) -> str:
+        s = self.summary()
+        return f"Result(date={s['date']}, regime={s['v5_regime']}, resonance={s['v6_resonance']}, quality={s['data_quality']})"
