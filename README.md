@@ -59,6 +59,7 @@ rundog-data/
 │   ├── trade_engine.py      # 编排器: 状态机 + 执行建议
 │   ├── cycle_engine.py       # v2: 7阶段板块周期模型
 │   ├── trade_executor.py    # v3+v4: 龙头生命周期 + 资金风控
+│   ├── regime_engine.py     # v5: 市场状态识别 + 策略切换
 │   ├── validator.py         # 数据校验
 │   └── utils.py             # HTTP重试/限流/工具
 ├── config.py                # 配置中心
@@ -305,13 +306,34 @@ python main.py --execute --date 2026-06-26
 
 ---
 
+## 市场状态识别 (v5)
+
+```bash
+python main.py --regime --date 2026-06-26
+# → data/YYYY-MM-DD_regime.json
+```
+
+### 4大市场状态
+
+| 状态 | 评分 | 策略模式 | 行为 |
+|------|:--:|------|------|
+| 趋势市 | 8-10 | aggressive | 满仓进攻 |
+| 震荡市 | 6-7 | selective | 只做回踩 |
+| 退潮市 | 4-5 | defensive | 降仓防守 |
+| 恐慌市 | 0-3 | liquidation | 空仓 |
+
+### v5 总控
+
+> 先判断市场允许不允许赚钱，再决定用哪套交易系统
+
+---
 
 ## GitHub Actions 配置
 
 1. Fork 或创建仓库
 2. 推送代码到 `main` 分支
 3. GitHub Actions 自动按工作日定时执行
-4. 或手动触发: Actions → "Data Collector" → Run workflow
+4. 或手动触发: Actions → "Quant Pipeline" → Run workflow
 
 配置项 (可选):
 - 修改 `config.py` 中的股票池、指数列表、评分参数

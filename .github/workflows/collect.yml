@@ -74,6 +74,16 @@ jobs:
             python main.py --execute
           fi
 
+      - name: 运行市场状态识别
+        id: regime
+        if: steps.collector.outputs.exit_code != '2'
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python main.py --regime --date "${{ github.event.inputs.date }}"
+          else
+            python main.py --regime
+          fi
+
       - name: 提交数据到仓库
         if: always() && steps.collector.outputs.exit_code != '2'
         run: |
