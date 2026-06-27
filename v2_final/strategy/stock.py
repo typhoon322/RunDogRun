@@ -18,10 +18,10 @@ def pick_leaders(stocks: list[dict], sector_rank: list[dict] | None = None,
     for s in stocks:
         code = s.get("code", "")
         name = s.get("name", "")
-        chg = s.get("change_pct", 0)
-        vol = s.get("volume", 0)
-        pe = s.get("pe", 0)
-        price = s.get("price", 0)
+        chg = float(s.get("change_pct", 0) or 0)
+        vol = float(s.get("volume", 0) or 0)
+        pe = float(s.get("pe", 0) or 0)
+        price = float(s.get("price", 0) or 0)
 
         # 过滤
         if "ST" in name or "N" in name or "*" in name:

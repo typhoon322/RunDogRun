@@ -59,3 +59,45 @@ def get_market_data() -> dict[str, list[dict]]:
 
     logger.info(f"数据: {len(result['indices'])}指数 {len(result['sectors'])}板块 {len(result['stocks'])}个股")
     return result
+
+
+def get_daily_data(symbol: str = "000001", start_date: str = "20240101",
+                   end_date: str = "20261231", adjust: str = "qfq"):
+    """
+    获取个股日线历史 K 线 (用于回测)
+
+    Returns:
+        pandas DataFrame with columns: date, open, high, low, close, volume, pct
+    """
+    import akshare as ak
+    import pandas as pd
+
+    logger.info(f"获取 {symbol} 日线数据 {start_date}→{end_date}")
+
+    try:
+        df = ak.stock_zh_a_hist(
+            symbol=symbol,
+            period="daily",
+            start_date=start_date,
+            end_date=end_date,
+            adjust=adjust,
+        )
+    except Exception:
+        # fallback: try without adjust
+        try:
+            df = ak.stock_zh_a_hist(symbol=symbol, period="daily",
+                                     start_date=start_date, end_date=end_date)
+        except Exception:
+            logger.warning(f"无法获取 {symbol} 历史数据")
+            return pd.DataFrame(columns=["date", "open", "high", "low", "close", "volume", "pct"])
+
+    if df.empty:
+        return pd.DataFrame(columns=["date", "open", "high", "low", "close", "volume", "pct"])
+
+    df = df.rename(columns={
+        "日期": "date", "收盘": "close", "开盘": "open",
+        "最高": "high", "最低": "low", "成交量": "volume", "涨跌幅": "pct",
+    })
+
+    logger.info(f"  获取 {len(df)} 条日线数据")
+    return df

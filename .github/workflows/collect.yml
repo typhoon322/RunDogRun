@@ -1,116 +1,38 @@
-name: Quant Pipeline
+name: v2.2 Daily Backtest & Report
 
 on:
   schedule:
-    # 北京时间每个交易日收盘后 (UTC+8 19:00 = UTC 11:00)
-    # 周一至周五执行
-    - cron: '0 11 * * 1-5'
-  
-  # 允许手动触发
+    - cron: "0 12 * * 1-5"
   workflow_dispatch:
-    inputs:
-      date:
-        description: '指定日期 (YYYY-MM-DD, 留空=今天)'
-        required: false
-        default: ''
 
 jobs:
-  pipeline:
+  run:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          python-version: "3.10"
 
-      - name: 设置 Python
-        uses: actions/setup-python@v5
+      - name: Install dependencies
+        run: pip install akshare pandas
+
+      - name: Run v2.2 pipeline (backtest + live signal + report)
+        run: python main.py --symbol 000001
+
+      - name: Upload daily report
+        uses: actions/upload-artifact@v4
         with:
-          python-version: '3.10'
+          name: daily-report
+          path: data/outputs/daily_report.json
 
-      - name: 安装依赖
-        run: pip install -r requirements.txt
-
-      - name: 运行数据采集
-        id: collector
+      - name: Commit outputs
         run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            python main.py --date "${{ github.event.inputs.date }}"
-          else
-            python main.py
-          fi
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-
-      - name: 运行评分分析
-        id: analyzer
-        if: steps.collector.outputs.exit_code != '2'
-        run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            python main.py --analyze --date "${{ github.event.inputs.date }}"
-          else
-            python main.py --analyze
-          fi
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-
-      - name: 运行板块周期分析
-        id: cycler
-        if: steps.collector.outputs.exit_code != '2'
-        run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            python main.py --cycle --date "${{ github.event.inputs.date }}"
-          else
-            python main.py --cycle
-          fi
-
-      - name: 运行终极执行分析
-        id: executor
-        if: steps.collector.outputs.exit_code != '2'
-        run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            python main.py --execute --date "${{ github.event.inputs.date }}"
-          else
-            python main.py --execute
-          fi
-
-      - name: 运行市场状态识别
-        id: regime
-        if: steps.collector.outputs.exit_code != '2'
-        run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            python main.py --regime --date "${{ github.event.inputs.date }}"
-          else
-            python main.py --regime
-          fi
-
-      - name: 提交数据到仓库
-        if: always() && steps.collector.outputs.exit_code != '2'
-        run: |
-          git config user.name "quant-data-bot"
-          git config user.email "bot@rundog.local"
-          
-          # 拉取远程更新避免冲突
-          git pull --rebase origin main || true
-          
-          git add data/
-          
-          # 仅在有变更时提交
-          if git diff --cached --quiet; then
-            echo "无数据变更, 跳过提交"
-          else
-            git commit -m "📊 每日数据更新 $(date +%Y-%m-%d)"
-            git push origin main
-            echo "数据已推送到远程仓库"
-          fi
-
-      - name: 采集警告通知
-        if: steps.collector.outputs.exit_code == '1'
-        run: |
-          echo "⚠️ 数据采集完成但存在警告 (data_quality=warning)"
-
-      - name: 采集失败记录
-        if: steps.collector.outputs.exit_code == '2'
-        run: |
-          echo "❌ 数据采集严重失败 (data_quality=failed)"
-          echo "请检查日志排查问题"
+          git config user.name "v2-bot"
+          git config user.email "bot@v2.local"
+          git add data/outputs/ logs/ || true
+          git commit -m "📊 日报 $(date +%Y-%m-%d)" || echo "no changes"
+          git push || echo "push skipped"
