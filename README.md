@@ -328,6 +328,38 @@ python main.py --regime --date 2026-06-26
 
 ---
 
+## 回测与强化学习 (v7 + v8)
+
+```bash
+python main.py --backtest   # v7 回测+优化
+python main.py --train      # v8 RL Agent训练
+```
+
+### v7: 回测引擎
+
+| 指标 | 说明 |
+|------|------|
+| 总收益/年化 | 策略盈利能力 |
+| 最大回撤 | 风险暴露 |
+| 胜率/盈亏比 | 交易质量 |
+| 夏普比率 | 风险调整收益 |
+| 策略评分 | 0-100综合评分 |
+
+优化: Grid Search + Walk-Forward 滚动验证
+
+### v8: Q-Learning 交易Agent
+
+```
+状态 → 动作 → 奖励 → 学习
+```
+
+状态空间: strong_bull / mild_bull / neutral / mild_bear / strong_bear
+动作: BUY / HOLD / SELL / INCREASE / DECREASE / NO_ACTION
+
+> v7负责证明系统有效，v8让系统自己变强
+
+---
+
 ## GitHub Actions 配置
 
 1. Fork 或创建仓库

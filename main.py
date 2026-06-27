@@ -10,9 +10,10 @@ import os
 import sys
 
 import config
-from src.utils import setup_logging, is_trading_day
+from src.utils import is_trading_day
+from src.utils.logger import get_logger
 
-logger = setup_logging()
+logger = get_logger("main")
 
 
 def run_pipeline(date_str: str) -> int:
@@ -79,11 +80,19 @@ def main() -> int:
         elif args[i] in ("--analyze", "--trade", "--cycle", "--execute", "--regime"):
             mode = args[i][2:]
             i += 1
+        elif args[i] == "--backtest":
+            mode = "backtest"
+            i += 1
+        elif args[i] == "--train":
+            mode = "train"
+            i += 1
         elif args[i] == "--help":
             print("v6 量化系统")
             print("  python main.py                    # 完整管道 v1→v6")
             print("  python main.py --date YYYY-MM-DD   # 指定日期")
             print("  python main.py --check-only        # 交易日检查")
+            print("  python main.py --backtest          # v7 回测+优化")
+            print("  python main.py --train             # v8 RL Agent训练")
             print("  python main.py --analyze/--trade/--cycle/--execute/--regime")
             return 0
         else:
@@ -102,6 +111,43 @@ def main() -> int:
     # 执行
     if mode == "pipeline":
         return run_pipeline(date_str)
+    elif mode == "backtest":
+        from src.v7_backtest.backtest_engine import run_backtest
+        from src.v7_backtest.optimizer import walk_forward_validation
+
+        logger.info(f"v7 回测: {date_str}")
+        bt = run_backtest("2026-01-01", date_str, config.DATA_DIR)
+
+        bt_path = f"{config.DATA_DIR}/{date_str}_backtest.json"
+        with open(bt_path, "w", encoding="utf-8") as f:
+            json.dump(bt, f, ensure_ascii=False, indent=2)
+
+        m = bt.get("metrics", {})
+        logger.info(f"回测: 收益{m.get('total_return_pct',0)}%, "
+                    f"胜率{m.get('win_rate',0)}, 评分{m.get('strategy_score',0)}")
+        logger.info(f"输出: {bt_path}")
+
+        # Walk-Forward 验证
+        wf = walk_forward_validation(config.DATA_DIR)
+        logger.info(f"Walk-Forward: robust={wf.get('is_robust')}, "
+                    f"overfit={wf.get('overfit_risk')}")
+        return 0
+    elif mode == "train":
+        from src.v8_agent.rl_agent import train_agent
+
+        logger.info("v8 RL Agent 训练...")
+        result = train_agent(config.DATA_DIR, episodes=30)
+
+        train_path = f"{config.DATA_DIR}/{date_str}_agent.json"
+        with open(train_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        p = result.get("policy", {})
+        logger.info(f"Agent: {result.get('agent_state')}, "
+                    f"episodes={result.get('episodes')}, "
+                    f"avg_reward={p.get('avg_reward',0)}")
+        logger.info(f"输出: {train_path}")
+        return 0
     else:
         return run_single_step(date_str, mode)
 
