@@ -1,0 +1,56 @@
+{
+  "date": "2026-06-26",
+  "generated_at": "2026-06-27T21:17:43.647769+08:00",
+  "version": "1.2.0",
+  "top_sectors": [
+    {
+      "name": "玻璃玻纤",
+      "code": "BK0546",
+      "change_pct": 1.62,
+      "trend": 2,
+      "momentum": 1,
+      "money_flow": 1,
+      "breadth": 1,
+      "stability": 1,
+      "score": 6,
+      "label": "rotation",
+      "rank": 1
+    },
+    {
+      "name": "光学光电子",
+      "code": "BK1038",
+      "change_pct": 0.35,
+      "trend": 1,
+      "momentum": 1,
+      "money_flow": 0,
+      "breadth": 1,
+      "stability": 1,
+      "score": 4,
+      "label": "watch",
+      "rank": 2
+    },
+    {
+      "name": "电子化学品Ⅱ",
+      "code": "BK1039",
+      "change_pct": 0.36,
+      "trend": 1,
+      "momentum": 1,
+      "money_flow": 0,
+      "breadth": 1,
+      "stability": 1,
+      "score": 4,
+      "label": "watch",
+      "rank": 3
+    }
+  ],
+  "candidates": [],
+  "snapshot": {
+    "total_sectors": 100,
+    "qualified_sectors": 1,
+    "core_trend_sectors": 0,
+    "total_stocks": 117,
+    "candidate_count": 0,
+    "leading_count": 0,
+    "market_status": "strong_bear"
+  }
+}

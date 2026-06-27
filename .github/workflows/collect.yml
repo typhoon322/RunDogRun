@@ -43,6 +43,17 @@ jobs:
           fi
           echo "exit_code=$?" >> $GITHUB_OUTPUT
 
+      - name: 运行评分分析
+        id: analyzer
+        if: steps.collector.outputs.exit_code != '2'
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python main.py --analyze --date "${{ github.event.inputs.date }}"
+          else
+            python main.py --analyze
+          fi
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+
       - name: 提交数据到仓库
         if: always() && steps.collector.outputs.exit_code != '2'
         run: |
