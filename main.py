@@ -1,204 +1,71 @@
 """
-main.py — 数据采集编排入口
+main.py — v6 量化系统入口
 ============================
-按顺序执行各模块, 模块间容错, 降级机制, 标准化 JSON 输出
-
-使用:
-    python main.py              # 采集今日数据
-    python main.py --date 2026-06-27  # 采集指定日期
-    python main.py --check-only       # 仅校验已有数据
+默认运行完整管道 (v1→v6)
+兼容旧接口: --analyze, --trade, --cycle, --execute, --regime
 """
 
 import json
-import logging
 import os
 import sys
-import time
-from datetime import datetime
-from pathlib import Path
-from typing import Any
 
 import config
 from src.utils import setup_logging, is_trading_day
-from src.market import fetch_index_quotes, compute_market_summary
-from src.sector import fetch_industry_sectors
-from src.stock import fetch_stock_quotes, detect_anomalies_from_stocks
-from src.sentiment import fetch_hot_stocks, compute_sentiment_indicators
-from src.validator import validate_data
 
-logger = logging.getLogger("quant-collector")
+logger = setup_logging()
 
 
-def collect_all(date_str: str) -> dict[str, Any]:
-    """
-    执行完整数据采集流程。
-
-    Args:
-        date_str: 日期字符串 YYYY-MM-DD
-
-    Returns:
-        完整的标准化数据字典
-    """
-    result = {
-        "date": date_str,
-        "generated_at": datetime.now(config.CN_TZ).isoformat(),
-        "version": "1.0.0",
-    }
-
-    errors = []
-    warnings = []
-
-    # ============================================================
-    # 1. 大盘数据 (腾讯财经 — 稳定, 不依赖其他模块)
-    # ============================================================
-    logger.info("=" * 50)
-    logger.info(f"开始采集市场数据: {date_str}")
-    logger.info("=" * 50)
-
-    logger.info("[1/4] 大盘指数数据...")
-    try:
-        indices = fetch_index_quotes()
-        market_summary = compute_market_summary(indices)
-        result["market"] = {
-            "indices": indices,
-            **market_summary,
-        }
-        logger.info(f"  大盘: {market_summary['market_status']}, "
-                    f"涨跌 {market_summary['overall_return']}%")
-    except Exception as e:
-        logger.error(f"大盘数据采集失败: {e}")
-        errors.append(f"market: {e}")
-        result["market"] = {
-            "indices": [],
-            "overall_return": 0.0,
-            "overall_volume_ratio": 1.0,
-            "market_status": "unknown",
-        }
-
-    # ============================================================
-    # 2. 板块数据 (东财 push2 — 可能因反爬失败, 降级处理)
-    # ============================================================
-    logger.info("[2/4] 行业板块数据...")
-    sectors = []
-    try:
-        sectors = fetch_industry_sectors()
-    except Exception as e:
-        logger.warning(f"板块数据采集失败 (降级): {e}")
-        warnings.append(f"sector: {e}")
-
-    result["sectors"] = sectors
-
-    # ============================================================
-    # 3. 个股数据 (腾讯财经批量 — 稳定但需分批)
-    # ============================================================
-    logger.info(f"[3/4] 个股数据 ({len(config.STOCK_POOL)} 只)...")
-    stocks = []
-    try:
-        stocks = fetch_stock_quotes()
-    except Exception as e:
-        logger.error(f"个股数据采集失败: {e}")
-        errors.append(f"stock: {e}")
-
-    result["stocks"] = stocks
-
-    # ============================================================
-    # 4. 情绪指标 (同花顺 + 自计算)
-    # ============================================================
-    logger.info("[4/4] 情绪指标...")
-    sentiment = {}
-    try:
-        hot_stocks = fetch_hot_stocks(date_str)
-    except Exception as e:
-        logger.warning(f"同花顺热点获取失败 (降级): {e}")
-        hot_stocks = []
-
-    try:
-        sentiment = compute_sentiment_indicators(
-            stocks=stocks,
-            sectors=sectors,
-            hot_stocks=hot_stocks,
-        )
-    except Exception as e:
-        logger.error(f"情绪指标计算失败: {e}")
-        errors.append(f"sentiment: {e}")
-        sentiment = {
-            "limit_up_count": 0,
-            "limit_down_count": 0,
-            "up_down_ratio": 1.0,
-            "risk_level": "unknown",
-            "top_themes": [],
-            "anomalies": [],
-        }
-
-    # 合并个股异常事件
-    try:
-        stock_anomalies = detect_anomalies_from_stocks(stocks)
-        sentiment.setdefault("anomalies", []).extend(stock_anomalies)
-    except Exception as e:
-        logger.warning(f"异常检测失败: {e}")
-
-    result["sentiment"] = sentiment
-
-    # ============================================================
-    # 5. 数据校验
-    # ============================================================
-    logger.info("数据校验...")
-    try:
-        quality = validate_data(result["market"], sectors, stocks, sentiment)
-        result["data_quality"] = quality["data_quality"]
-        result["quality_issues"] = quality.get("issues", [])
-        result["quality_metrics"] = quality.get("metrics", {})
-    except Exception as e:
-        logger.error(f"数据校验失败: {e}")
-        result["data_quality"] = "failed"
-        result["quality_issues"] = [{"severity": "error", "message": str(e)}]
-        result["quality_metrics"] = {}
-
-    # ============================================================
-    # 6. 汇总
-    # ============================================================
-    result["collection_errors"] = errors
-    result["collection_warnings"] = warnings
-
-    active_stocks = sum(1 for s in stocks if not s.get("is_suspended", True))
-    logger.info("=" * 50)
-    logger.info(f"采集完成: 指数{len(result['market']['indices'])}个, "
-                f"板块{len(sectors)}个, 个股{active_stocks}只活跃")
-    logger.info(f"数据质量: {result['data_quality']}, "
-                f"错误{len(errors)}个, 警告{len(warnings)}个")
-    logger.info("=" * 50)
-
-    return result
+def run_pipeline(date_str: str) -> int:
+    """运行完整 v1-v6 管道"""
+    from src.engine.pipeline import run
+    output = run(date_str)
+    quality = output.get("data_quality", "ok")
+    if quality == "failed":
+        return 2
+    elif quality == "warning":
+        return 1
+    return 0
 
 
-def save_result(result: dict[str, Any], output_path: str | None = None) -> str:
-    """保存结果到 JSON 文件"""
-    if output_path is None:
-        output_path = f"{config.DATA_DIR}/{result['date']}.json"
+def run_single_step(date_str: str, step: str) -> int:
+    """运行单个分析步骤 (向后兼容)"""
+    data_path = f"{config.DATA_DIR}/{date_str}.json"
+    if not os.path.exists(data_path) and step not in ("collect",):
+        logger.error(f"数据不存在: {data_path}")
+        return 2
 
-    # 确保目录存在
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    if step == "analyze":
+        from src.v2_sector.sector_score import score_sectors
+        from src.v1_2_stock.stock_score import score_stocks
+        from src.engine.analyzer import analyze as _analyze
+        result = _analyze(date_str)
+    elif step == "trade":
+        from src.v1_4_risk.risk_control import trade
+        result = trade(date_str)
+    elif step == "cycle":
+        from src.v2_sector.sector_cycle import analyze_cycle
+        result = analyze_cycle(date_str)
+    elif step == "execute":
+        from src.v5_regime.trade_executor import execute
+        result = execute(date_str)
+    elif step == "regime":
+        from src.v5_regime.market_regime import analyze_regime
+        result = analyze_regime(date_str)
+    else:
+        logger.error(f"未知步骤: {step}")
+        return 2
 
-    with open(output_path, "w", encoding="utf-8") as f:
+    out_path = f"{config.DATA_DIR}/{date_str}_{step}.json"
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-
-    file_size = os.path.getsize(output_path)
-    logger.info(f"数据已写入: {output_path} ({file_size/1024:.1f} KB)")
-    return output_path
+    logger.info(f"输出: {out_path}")
+    return 0
 
 
 def main() -> int:
-    """主入口，返回退出码: 0=正常, 1=有warning, 2=严重错误"""
-    setup_logging()
-
-    # 解析参数
     date_str = config.today_cn()
+    mode = "pipeline"  # 默认跑全管道
     check_only = False
-    analyze_mode = False
-    trade_mode = False
-    cycle_mode = False
-    execute_mode = False
-    regime_mode = False
 
     args = sys.argv[1:]
     i = 0
@@ -209,176 +76,34 @@ def main() -> int:
         elif args[i] == "--check-only":
             check_only = True
             i += 1
-        elif args[i] == "--analyze":
-            analyze_mode = True
-            i += 1
-        elif args[i] == "--trade":
-            trade_mode = True
-            i += 1
-        elif args[i] == "--cycle":
-            cycle_mode = True
-            i += 1
-        elif args[i] == "--execute":
-            execute_mode = True
-            i += 1
-        elif args[i] == "--regime":
-            regime_mode = True
+        elif args[i] in ("--analyze", "--trade", "--cycle", "--execute", "--regime"):
+            mode = args[i][2:]
             i += 1
         elif args[i] == "--help":
-            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze] [--trade] [--cycle] [--execute] [--regime]")
-            print("  --date        指定日期 (默认今天)")
-            print("  --check-only  仅检查是否为交易日")
-            print("  --analyze     运行 v1.1+v1.2 双层评分系统")
-            print("  --trade       运行 v1.3+v1.4 交易信号+仓位风控")
-            print("  --cycle       运行 v2 板块轮动周期模型")
-            print("  --execute     运行 v3+v4 终极执行分析")
-            print("  --regime      运行 v5 市场状态识别")
+            print("v6 量化系统")
+            print("  python main.py                    # 完整管道 v1→v6")
+            print("  python main.py --date YYYY-MM-DD   # 指定日期")
+            print("  python main.py --check-only        # 交易日检查")
+            print("  python main.py --analyze/--trade/--cycle/--execute/--regime")
             return 0
         else:
             i += 1
 
-    # 分析模式: 不需要交易日检查，直接对已有数据评分
-    if analyze_mode:
-        from src.analyzer import analyze
-
-        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
-            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json, 请先运行数据采集")
-            return 2
-
-        logger.info(f"开始双层评分分析: {date_str}")
-        result = analyze(date_str)
-
-        # 保存 watchlist
-        watchlist_path = f"{config.DATA_DIR}/{date_str}_watchlist.json"
-        with open(watchlist_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
-
-        logger.info(f"分析完成: {result['snapshot'].get('candidate_count', 0)} 个候选")
-        logger.info(f"输出: {watchlist_path}")
-        return 0
-
-    # 交易模式: 需要数据 + 评分结果
-    if trade_mode:
-        from src.trade_engine import trade
-
-        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
-            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json")
-            return 2
-
-        logger.info(f"开始交易信号分析: {date_str}")
-        result = trade(date_str)
-
-        # 保存交易建议
-        trade_path = f"{config.DATA_DIR}/{date_str}_trade.json"
-        with open(trade_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
-
-        summary = result.get("summary", {})
-        logger.info(
-            f"交易分析完成: BUY{summary.get('entry_count',0)} "
-            f"HOLD{summary.get('hold_count',0)} SELL{summary.get('exit_count',0)}"
-        )
-        logger.info(f"输出: {trade_path}")
-        return 0
-
-    # 周期模式: 分析板块轮动阶段
-    if cycle_mode:
-        from src.cycle_engine import analyze_cycle
-
-        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
-            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json")
-            return 2
-
-        logger.info(f"开始板块周期分析: {date_str}")
-        result = analyze_cycle(date_str)
-
-        cycle_path = f"{config.DATA_DIR}/{date_str}_cycle.json"
-        with open(cycle_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
-
-        snap = result.get("snapshot", {})
-        logger.info(
-            f"周期分析: 市场{result.get('market_state','?')}, "
-            f"Expansion={snap.get('expansion_count',0)}, "
-            f"可交易={len(result.get('tradable_sectors',[]))}板块"
-        )
-        logger.info(f"输出: {cycle_path}")
-        return 0
-
-    # 执行模式: v3+v4 终极分析
-    if execute_mode:
-        from src.trade_executor import execute
-
-        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
-            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json")
-            return 2
-
-        logger.info(f"开始终极执行分析: {date_str}")
-        result = execute(date_str)
-
-        exec_path = f"{config.DATA_DIR}/{date_str}_execute.json"
-        with open(exec_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
-
-        summary = result.get("summary", {})
-        risk = result.get("risk_control", {})
-        top = result.get("leader_stock")
-        logger.info(
-            f"执行分析: 龙头{summary.get('leaders_found',0)}, "
-            f"仓位{risk.get('total_exposure',0):.0%}, 模式{risk.get('risk_mode','?')}"
-            + (f", 第一:{top['name']}({top['life_cycle_label']})" if top else "")
-        )
-        logger.info(f"输出: {exec_path}")
-        return 0
-
-    # 市场状态模式: v5 识别市场 + 切换策略
-    if regime_mode:
-        from src.regime_engine import analyze_regime
-
-        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
-            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json")
-            return 2
-
-        logger.info(f"开始市场状态识别: {date_str}")
-        result = analyze_regime(date_str)
-
-        regime_path = f"{config.DATA_DIR}/{date_str}_regime.json"
-        with open(regime_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
-
-        logger.info(
-            f"市场状态: {result.get('regime_label','?')}({result.get('regime_score',0)}), "
-            f"模式{result.get('strategy_mode','?')}, {result.get('action','?')}"
-        )
-        logger.info(f"输出: {regime_path}")
-        return 0
-
-    # 交易日检查
-    if not is_trading_day(date_str):
-        logger.info(f"{date_str} 不是交易日, 跳过数据采集")
-        # 非交易日不报错, 退出码0
-        return 0
+    # 交易日检查 (非分析模式)
+    if mode == "pipeline" and not check_only:
+        if not is_trading_day(date_str):
+            logger.info(f"{date_str} 非交易日, 跳过")
+            return 0
 
     if check_only:
-        logger.info(f"{date_str} 是交易日")
+        logger.info(f"{date_str} {'是' if is_trading_day(date_str) else '非'}交易日")
         return 0
 
-    # 执行采集
-    start_time = time.time()
-    result = collect_all(date_str)
-    elapsed = time.time() - start_time
-
-    # 保存
-    output_path = save_result(result)
-    logger.info(f"总耗时: {elapsed:.1f}s")
-
-    # 退出码
-    quality = result.get("data_quality", "ok")
-    if quality == "failed":
-        return 2
-    elif quality == "warning":
-        return 1
-    return 0
+    # 执行
+    if mode == "pipeline":
+        return run_pipeline(date_str)
+    else:
+        return run_single_step(date_str, mode)
 
 
 if __name__ == "__main__":

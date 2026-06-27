@@ -1,5 +1,5 @@
 """
-量化中线数据采集系统 v1 — 配置中心
+A股中线量化系统 v6 — 配置中心
 """
 
 from datetime import datetime, timezone, timedelta
@@ -306,3 +306,18 @@ STOP_LOSS_PCT_WIDE = -0.12        # 宽止损线 -12%
 # -- 极端风险降仓 --
 RISK_EXTREME_MAX_EXPOSURE = 0.30  # 极端风险下最大总仓位
 RISK_EXTREME_SENTIMENT = "high"   # 触发降仓的情绪等级
+
+
+# ============================================================
+# v6 多周期共振配置
+# ============================================================
+
+# 共振方向判定阈值
+RESONANCE_UP_THRESHOLD = 0.5       # 上涨方向阈值 (%)
+RESONANCE_DOWN_THRESHOLD = -0.5    # 下跌方向阈值 (%)
+
+# 多周期回看窗口
+MULTI_CYCLE_LOOKBACK = 30          # 历史回溯天数 (用于周/月聚合)
+
+# 默认降级权重 (无历史数据时)
+DEFAULT_RESONANCE_LABEL = "flat"
