@@ -1,0 +1,95 @@
+{
+  "date": "2026-06-28",
+  "timestamp": "2026-06-28T02:00:47.464828",
+  "version": "2.0.0",
+  "signal": {
+    "action": "BUY",
+    "stock_code": "300088",
+    "stock_name": "长信科技",
+    "momentum": 13.41,
+    "confidence": 0.75,
+    "sector": "橡胶助剂",
+    "reason": "橡胶助剂 8.4 + 长信科技 13.41%",
+    "position_size": 0.2
+  },
+  "top_sectors": [
+    {
+      "name": "橡胶助剂",
+      "strength": 8.4,
+      "level": "strong"
+    },
+    {
+      "name": "有机硅",
+      "strength": 7.1,
+      "level": "strong"
+    },
+    {
+      "name": "玻纤制造",
+      "strength": 6.7,
+      "level": "strong"
+    },
+    {
+      "name": "航天装备Ⅲ",
+      "strength": 6.6,
+      "level": "strong"
+    },
+    {
+      "name": "航天装备Ⅱ",
+      "strength": 6.6,
+      "level": "strong"
+    }
+  ],
+  "top_leaders": [
+    {
+      "code": "300088",
+      "name": "长信科技",
+      "momentum": 13.41,
+      "volume": 6184972,
+      "amount_yi": 71.81,
+      "pe": 152.1
+    },
+    {
+      "code": "601016",
+      "name": "节能风电",
+      "momentum": 10.06,
+      "volume": 2823286,
+      "amount_yi": 10.95,
+      "pe": 31.6
+    },
+    {
+      "code": "000823",
+      "name": "超声电子",
+      "momentum": 10.01,
+      "volume": 1062401,
+      "amount_yi": 30.18,
+      "pe": 128.3
+    },
+    {
+      "code": "002559",
+      "name": "亚威股份",
+      "momentum": 10.01,
+      "volume": 1103498,
+      "amount_yi": 13.37,
+      "pe": 52.6
+    },
+    {
+      "code": "600552",
+      "name": "凯盛科技",
+      "momentum": 10.0,
+      "volume": 1532902,
+      "amount_yi": 44.69,
+      "pe": 250.4
+    }
+  ],
+  "risk_check": "pass",
+  "execution": {
+    "date": "2026-06-28T02:00:47.463765",
+    "status": "filled",
+    "action": "BUY",
+    "stock": "300088",
+    "name": "长信科技",
+    "confidence": 0.75,
+    "position_size": 0.2,
+    "mode": "paper"
+  }
+}
