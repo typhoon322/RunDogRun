@@ -197,6 +197,7 @@ def main() -> int:
     analyze_mode = False
     trade_mode = False
     cycle_mode = False
+    execute_mode = False
 
     args = sys.argv[1:]
     i = 0
@@ -216,10 +217,17 @@ def main() -> int:
         elif args[i] == "--cycle":
             cycle_mode = True
             i += 1
+        elif args[i] == "--execute":
+            execute_mode = True
+            i += 1
         elif args[i] == "--help":
-            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze] [--trade] [--cycle]")
+            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze] [--trade] [--cycle] [--execute]")
             print("  --date        指定日期 (默认今天)")
             print("  --check-only  仅检查是否为交易日")
+            print("  --analyze     运行 v1.1+v1.2 双层评分系统")
+            print("  --trade       运行 v1.3+v1.4 交易信号+仓位风控")
+            print("  --cycle       运行 v2 板块轮动周期模型")
+            print("  --execute     运行 v3+v4 终极执行分析")
             print("  --analyze     运行 v1.1+v1.2 双层评分系统")
             print("  --trade       运行 v1.3+v1.4 交易信号+仓位风控")
             print("  --cycle       运行 v2 板块轮动周期模型")
@@ -293,6 +301,32 @@ def main() -> int:
             f"可交易={len(result.get('tradable_sectors',[]))}板块"
         )
         logger.info(f"输出: {cycle_path}")
+        return 0
+
+    # 执行模式: v3+v4 终极分析
+    if execute_mode:
+        from src.trade_executor import execute
+
+        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
+            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json")
+            return 2
+
+        logger.info(f"开始终极执行分析: {date_str}")
+        result = execute(date_str)
+
+        exec_path = f"{config.DATA_DIR}/{date_str}_execute.json"
+        with open(exec_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        summary = result.get("summary", {})
+        risk = result.get("risk_control", {})
+        top = result.get("leader_stock")
+        logger.info(
+            f"执行分析: 龙头{summary.get('leaders_found',0)}, "
+            f"仓位{risk.get('total_exposure',0):.0%}, 模式{risk.get('risk_mode','?')}"
+            + (f", 第一:{top['name']}({top['life_cycle_label']})" if top else "")
+        )
+        logger.info(f"输出: {exec_path}")
         return 0
 
     # 交易日检查

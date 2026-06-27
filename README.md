@@ -44,6 +44,7 @@ rundog-data/
 │   ├── YYYY-MM-DD_watchlist.json  # v1.2 候选池
 │   ├── YYYY-MM-DD_trade.json # v1.4 交易建议
 │   ├── YYYY-MM-DD_cycle.json # v2 周期分析
+│   ├── YYYY-MM-DD_execute.json # v4 终极执行
 │   └── positions.json        # 持仓状态持久化
 ├── src/
 │   ├── market.py            # 大盘指数 (腾讯财经)
@@ -57,6 +58,7 @@ rundog-data/
 │   ├── position.py          # v1.4: 仓位分配 + 风控
 │   ├── trade_engine.py      # 编排器: 状态机 + 执行建议
 │   ├── cycle_engine.py       # v2: 7阶段板块周期模型
+│   ├── trade_executor.py    # v3+v4: 龙头生命周期 + 资金风控
 │   ├── validator.py         # 数据校验
 │   └── utils.py             # HTTP重试/限流/工具
 ├── config.py                # 配置中心
@@ -263,6 +265,46 @@ python main.py --cycle --date 2026-06-26
 > 赚钱不来自选股，而来自"在正确周期做正确板块"
 
 ---
+
+## 龙头生命周期 + 资金风控 (v3 + v4)
+
+```bash
+python main.py --execute --date 2026-06-26
+# → data/YYYY-MM-DD_execute.json
+```
+
+### v3: 龙头生命周期 (7阶段)
+
+启动 → 试盘 → 主升 🔥 → 加速 → 高潮 → 震荡 → 结束
+
+| 阶段 | 动作 | 仓位 |
+|------|------|:--:|
+| 启动期 | 小仓试错 | 10-20% |
+| 试盘期 | 逐步加仓 | 20-40% |
+| 主升期 | 核心持仓 | 40-80% |
+| 加速期 | 持有不加 | 20-50% |
+| 高潮期 | 减仓 | 5-15% |
+| 震荡期 | 清仓 | 0% |
+| 结束期 | 空仓 | 0% |
+
+### v4: 资金管理 + 回撤控制
+
+| 市场 | 总仓位上限 |
+|------|:--:|
+| Risk-On | 70-90% |
+| Neutral | 40-70% |
+| Risk-Off | 0-40% |
+
+| 回撤 | 动作 |
+|------|------|
+| -5% | 降仓20% |
+| -10% | 降仓50% |
+| -15% | 空仓观察 |
+
+> v3 负责赚钱(吃主升浪), v4 负责不死(控制回撤)
+
+---
+
 
 ## GitHub Actions 配置
 
