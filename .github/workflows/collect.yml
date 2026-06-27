@@ -1,4 +1,4 @@
-name: Data Collector
+name: Quant Pipeline
 
 on:
   schedule:
@@ -15,9 +15,9 @@ on:
         default: ''
 
 jobs:
-  collect:
+  pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: 检出代码
@@ -53,6 +53,26 @@ jobs:
             python main.py --analyze
           fi
           echo "exit_code=$?" >> $GITHUB_OUTPUT
+
+      - name: 运行板块周期分析
+        id: cycler
+        if: steps.collector.outputs.exit_code != '2'
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python main.py --cycle --date "${{ github.event.inputs.date }}"
+          else
+            python main.py --cycle
+          fi
+
+      - name: 运行终极执行分析
+        id: executor
+        if: steps.collector.outputs.exit_code != '2'
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python main.py --execute --date "${{ github.event.inputs.date }}"
+          else
+            python main.py --execute
+          fi
 
       - name: 提交数据到仓库
         if: always() && steps.collector.outputs.exit_code != '2'
