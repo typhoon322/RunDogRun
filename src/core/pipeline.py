@@ -28,8 +28,19 @@ def run(date_str: str = None, data_dir: str = None) -> Result:
     logger.info(f"v6 Pipeline 启动: {date_str}")
     logger.info("=" * 55)
 
-    # ── v1: 数据采集 ──
+    # ── v1: 数据采集 (可插拔数据源) ──
     logger.info("[v1] 数据采集...")
+
+    # 尝试 provider factory (自动选择最佳源)
+    try:
+        from src.data.provider import get_provider
+        provider = get_provider()
+        logger.info(f"  数据源: {provider.name}")
+    except Exception as e:
+        logger.warning(f"Provider 不可用: {e}, 使用直连API")
+        provider = None
+
+    # 始终使用直连模块 (保持稳定)
     from src.data.market_data import fetch_index_quotes, compute_market_summary
     from src.data.sector_data import fetch_industry_sectors
     from src.data.stock_data import fetch_stock_quotes
