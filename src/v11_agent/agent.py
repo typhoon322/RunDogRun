@@ -38,6 +38,14 @@ class SelfEvolvingAgent:
         """基于当前状态 + 策略参数做决策"""
         return self.policy.decide(state)
 
+    def act(self, state: dict[str, Any]) -> str:
+        """v12 兼容: 市场模拟中的动作接口"""
+        return self.decide(state)
+
+    @property
+    def name(self) -> str:
+        return "v11_agent"
+
     def feedback(self, trade: dict[str, Any], portfolio: dict[str, Any]) -> dict[str, Any]:
         """
         交易结果反馈 — 驱动学习闭环。
