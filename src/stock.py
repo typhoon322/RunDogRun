@@ -133,6 +133,7 @@ def fetch_stock_quotes(
             # 数据缺失
             results.append({
                 "code": code,
+                "sector": config.STOCK_SECTOR_MAP.get(code, ""),
                 "name": config.STOCK_NAMES.get(code, f"股票{code}"),
                 "return": 0.0,
                 "price": 0.0,
@@ -178,6 +179,7 @@ def fetch_stock_quotes(
 
         results.append({
             "code": code,
+            "sector": config.STOCK_SECTOR_MAP.get(code, ""),
             "name": raw["name"],
             "return": raw["change_pct"],
             "price": raw["price"],

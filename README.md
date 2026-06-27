@@ -40,11 +40,16 @@ rundog-data/
 ├── .github/workflows/
 │   └── collect.yml          # GitHub Actions 每日自动采集
 ├── data/                     # 每日 JSON 输出
+│   ├── YYYY-MM-DD.json       # v1 原始数据
+│   └── YYYY-MM-DD_watchlist.json  # v1.2 候选池
 ├── src/
 │   ├── market.py            # 大盘指数 (腾讯财经)
 │   ├── sector.py            # 行业板块 (东财 push2)
 │   ├── stock.py             # 个股数据 (腾讯财经)
 │   ├── sentiment.py         # 情绪指标 (同花顺+自算)
+│   ├── sector_scorer.py     # Layer 1: 板块5维评分 (v1.1)
+│   ├── stock_scorer.py      # Layer 2: 个股5维评分 (v1.2)
+│   ├── analyzer.py          # 编排器: 历史读取+双层评分+候选池
 │   ├── validator.py         # 数据校验
 │   └── utils.py             # HTTP重试/限流/工具
 ├── config.py                # 配置中心
@@ -125,6 +130,43 @@ rundog-data/
   "data_quality": "ok"
 }
 ```
+
+---
+
+## 双层评分系统 (v1.1 + v1.2)
+
+```bash
+# 运行分析 (需先采集数据)
+python main.py --analyze --date 2026-06-26
+```
+
+### Layer 1: 板块评分 (0-10分)
+
+| 维度 | 说明 | 分数 |
+|------|------|:--:|
+| Trend | 5日+20日趋势 | 0-2 |
+| Momentum | 3日 vs 10日加速度 | 0-2 |
+| Money Flow | 资金持续性 | 0-2 |
+| Breadth | 上涨家数占比 | 0-2 |
+| Stability | 波动稳定性 | 0-2 |
+
+分类: ≥8=主线板块, 6-7=强势轮动, 4-5=观察, <4=过滤
+
+### Layer 2: 个股评分 (0-10分)
+
+| 维度 | 说明 | 分数 |
+|------|------|:--:|
+| Trend | 趋势方向 | 0-2 |
+| Relative Strength ⭐ | 是否跑赢板块 | 0-2 |
+| Volume | 量能质量 | 0-2 |
+| Structure | 价格结构 | 0-2 |
+| Timing | 板块周期位置 | 0-2 |
+
+### 候选池规则
+
+1. 板块 Score ≥ 6 的板块
+2. 这些板块中 Stock Score ≥ 7 的个股
+3. 每板块保留 Top 3，全局不超过 30 只
 
 ---
 

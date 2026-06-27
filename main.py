@@ -194,6 +194,7 @@ def main() -> int:
     # 解析参数
     date_str = config.today_cn()
     check_only = False
+    analyze_mode = False
 
     args = sys.argv[1:]
     i = 0
@@ -204,13 +205,37 @@ def main() -> int:
         elif args[i] == "--check-only":
             check_only = True
             i += 1
+        elif args[i] == "--analyze":
+            analyze_mode = True
+            i += 1
         elif args[i] == "--help":
-            print("用法: python main.py [--date YYYY-MM-DD] [--check-only]")
+            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze]")
             print("  --date        指定日期 (默认今天)")
             print("  --check-only  仅检查是否为交易日")
+            print("  --analyze     运行 v1.1+v1.2 双层评分系统")
             return 0
         else:
             i += 1
+
+    # 分析模式: 不需要交易日检查，直接对已有数据评分
+    if analyze_mode:
+        from src.analyzer import analyze
+
+        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
+            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json, 请先运行数据采集")
+            return 2
+
+        logger.info(f"开始双层评分分析: {date_str}")
+        result = analyze(date_str)
+
+        # 保存 watchlist
+        watchlist_path = f"{config.DATA_DIR}/{date_str}_watchlist.json"
+        with open(watchlist_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        logger.info(f"分析完成: {result['snapshot'].get('candidate_count', 0)} 个候选")
+        logger.info(f"输出: {watchlist_path}")
+        return 0
 
     # 交易日检查
     if not is_trading_day(date_str):
