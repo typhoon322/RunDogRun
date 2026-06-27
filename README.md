@@ -43,6 +43,7 @@ rundog-data/
 │   ├── YYYY-MM-DD.json       # v1 原始数据
 │   ├── YYYY-MM-DD_watchlist.json  # v1.2 候选池
 │   ├── YYYY-MM-DD_trade.json # v1.4 交易建议
+│   ├── YYYY-MM-DD_cycle.json # v2 周期分析
 │   └── positions.json        # 持仓状态持久化
 ├── src/
 │   ├── market.py            # 大盘指数 (腾讯财经)
@@ -55,6 +56,7 @@ rundog-data/
 │   ├── signals.py           # v1.3: 6种买卖信号检测
 │   ├── position.py          # v1.4: 仓位分配 + 风控
 │   ├── trade_engine.py      # 编排器: 状态机 + 执行建议
+│   ├── cycle_engine.py       # v2: 7阶段板块周期模型
 │   ├── validator.py         # 数据校验
 │   └── utils.py             # HTTP重试/限流/工具
 ├── config.py                # 配置中心
@@ -220,7 +222,45 @@ OBSERVE → ENTRY → HOLD → EXIT
 python main.py --date DATE        # ① 数据采集
 python main.py --analyze --date DATE  # ② 双层评分
 python main.py --trade --date DATE    # ③ 交易信号
+python main.py --cycle --date DATE    # ④ 板块周期
 ```
+
+---
+
+## 板块轮动周期模型 (v2)
+
+```bash
+python main.py --cycle --date 2026-06-26
+# → data/YYYY-MM-DD_cycle.json
+```
+
+### 7阶段周期
+
+```
+沉寂 → 启动 → 确认 → 发酵 → 高潮 → 分化 → 退潮
+```
+
+| 阶段 | 含义 | v1 建议 |
+|------|------|---------|
+| 沉寂期 | 无资金关注 | 跳过 |
+| 启动期 | 资金试探 | 观察龙头 |
+| 确认期 | 主线确认 | 可加仓 |
+| 发酵期 ⭐ | 最赚钱阶段 | 全力做多 |
+| 高潮期 | 风险上升 | 谨慎 |
+| 分化期 | 资金撤退 | 只减仓 |
+| 退潮期 | 完全退出 | 禁止交易 |
+
+### 市场总周期
+
+| 状态 | 条件 |
+|------|------|
+| Risk-On | 多板块处于 Expansion/Confirm |
+| Neutral | 混合状态 |
+| Risk-Off | 多板块处于 Decline/Divergence |
+
+### 核心原则
+
+> 赚钱不来自选股，而来自"在正确周期做正确板块"
 
 ---
 

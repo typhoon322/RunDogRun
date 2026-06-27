@@ -196,6 +196,7 @@ def main() -> int:
     check_only = False
     analyze_mode = False
     trade_mode = False
+    cycle_mode = False
 
     args = sys.argv[1:]
     i = 0
@@ -212,12 +213,16 @@ def main() -> int:
         elif args[i] == "--trade":
             trade_mode = True
             i += 1
+        elif args[i] == "--cycle":
+            cycle_mode = True
+            i += 1
         elif args[i] == "--help":
-            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze] [--trade]")
+            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze] [--trade] [--cycle]")
             print("  --date        指定日期 (默认今天)")
             print("  --check-only  仅检查是否为交易日")
             print("  --analyze     运行 v1.1+v1.2 双层评分系统")
             print("  --trade       运行 v1.3+v1.4 交易信号+仓位风控")
+            print("  --cycle       运行 v2 板块轮动周期模型")
             return 0
         else:
             i += 1
@@ -264,6 +269,30 @@ def main() -> int:
             f"HOLD{summary.get('hold_count',0)} SELL{summary.get('exit_count',0)}"
         )
         logger.info(f"输出: {trade_path}")
+        return 0
+
+    # 周期模式: 分析板块轮动阶段
+    if cycle_mode:
+        from src.cycle_engine import analyze_cycle
+
+        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
+            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json")
+            return 2
+
+        logger.info(f"开始板块周期分析: {date_str}")
+        result = analyze_cycle(date_str)
+
+        cycle_path = f"{config.DATA_DIR}/{date_str}_cycle.json"
+        with open(cycle_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        snap = result.get("snapshot", {})
+        logger.info(
+            f"周期分析: 市场{result.get('market_state','?')}, "
+            f"Expansion={snap.get('expansion_count',0)}, "
+            f"可交易={len(result.get('tradable_sectors',[]))}板块"
+        )
+        logger.info(f"输出: {cycle_path}")
         return 0
 
     # 交易日检查
