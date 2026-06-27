@@ -33,7 +33,7 @@ def grid_search(
 
     完整版会测试所有组合，这里用采样方式。
     """
-    from src.v7_backtest.backtest_engine import run_backtest
+    from src.v7.backtest_engine import run_backtest
 
     best_score = -999
     best_params = {}
@@ -76,7 +76,7 @@ def walk_forward_validation(
 
     检测策略是否在不同时段表现一致。
     """
-    from src.v7_backtest.backtest_engine import run_backtest
+    from src.v7.backtest_engine import run_backtest
 
     # 获取数据日期范围
     days = sorted([f.stem for f in Path(data_dir).glob("????-??-??.json")])

@@ -12,7 +12,7 @@ from typing import Any
 
 import config
 from src.utils import setup_logging
-from src.engine.context import Context
+from src.core.context import Context
 
 logger = logging.getLogger("quant.engine.pipeline")
 
@@ -28,11 +28,11 @@ def run(date_str: str, data_dir: str = config.DATA_DIR) -> dict[str, Any]:
 
     # ── v1: 数据采集 ──
     logger.info("[v1] 数据采集...")
-    from src.v1_data.market_data import fetch_index_quotes, compute_market_summary
-    from src.v1_data.sector_data import fetch_industry_sectors
-    from src.v1_data.stock_data import fetch_stock_quotes
-    from src.v1_data.sentiment_data import fetch_hot_stocks, compute_sentiment_indicators
-    from src.engine.validator import validate_data
+    from src.data.market_data import fetch_index_quotes, compute_market_summary
+    from src.data.sector_data import fetch_industry_sectors
+    from src.data.stock_data import fetch_stock_quotes
+    from src.data.sentiment_data import fetch_hot_stocks, compute_sentiment_indicators
+    from src.core.validator import validate_data
 
     indices = fetch_index_quotes()
     market_summary = compute_market_summary(indices)
@@ -47,23 +47,23 @@ def run(date_str: str, data_dir: str = config.DATA_DIR) -> dict[str, Any]:
 
     # ── v2: 板块评分 + 周期 ──
     logger.info("[v2] 板块评分 + 周期...")
-    from src.v2_sector.sector_score import score_sectors
-    from src.v2_sector.sector_cycle import analyze_cycle
+    from src.v2.sector_score import score_sectors
+    from src.v2.sector_cycle import analyze_cycle
 
     sectors_scored = score_sectors(sectors_raw)
     cycle_data = analyze_cycle(date_str, data_dir)
 
     # ── v1.2: 个股评分 ──
     logger.info("[v1.2] 个股评分...")
-    from src.v1_2_stock.stock_score import score_stocks
-    from src.engine.analyzer import load_history
+    from src.v1.stock_score import score_stocks
+    from src.core.analyzer import load_history
 
     history = load_history(data_dir, date_str)
     stocks_scored = score_stocks(stocks_raw, sectors_scored, history.get("stocks"))
 
     # ── v1.3: 买卖信号 ──
     logger.info("[v1.3] 信号检测...")
-    from src.v1_3_signal.entry_exit import (
+    from src.v1.signal_engine import (
         detect_entry_breakout, detect_entry_pullback, detect_entry_sector_start,
         detect_exit_trend_break, detect_exit_climax, detect_exit_weaker,
         compute_indicators,
@@ -86,14 +86,14 @@ def run(date_str: str, data_dir: str = config.DATA_DIR) -> dict[str, Any]:
 
     # ── v1.4: 仓位风控 ──
     logger.info("[v1.4] 仓位风控...")
-    from src.v1_4_risk.position import allocate_position, compute_stop_loss, compute_portfolio_risk
-    from src.v1_4_risk.risk_control import trade as compute_trade
+    from src.v4.position import allocate_position, compute_stop_loss, compute_portfolio_risk
+    from src.v4.risk_control import trade as compute_trade
 
     trade_data = compute_trade(date_str, data_dir)
 
     # ── v5: 市场状态 ──
     logger.info("[v5] 市场状态...")
-    from src.v5_regime.market_regime import analyze_regime
+    from src.v5.market_regime import analyze_regime
 
     regime_data = analyze_regime(date_str, data_dir)
     regime = regime_data.get("market_regime", "neutral")
@@ -101,9 +101,9 @@ def run(date_str: str, data_dir: str = config.DATA_DIR) -> dict[str, Any]:
 
     # ── v6: 多周期共振 + 自适应权重 ──
     logger.info("[v6] 多周期共振...")
-    from src.v6_cycle.multi_cycle import analyze_multi_cycle
-    from src.v6_cycle.resonance import compute_resonance
-    from src.v6_cycle.adaptive_weights import compute_adaptive_weights
+    from src.v6.multi_cycle import analyze_multi_cycle
+    from src.v6.resonance import compute_resonance
+    from src.v6.adaptive_weights import compute_adaptive_weights
 
     multi = analyze_multi_cycle(date_str, data_dir)
     resonance = compute_resonance(multi, sectors_raw, stocks_raw)

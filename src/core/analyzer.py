@@ -18,8 +18,8 @@ from pathlib import Path
 from typing import Any
 
 import config
-from src.v2_sector.sector_score import score_sectors
-from src.v1_2_stock.stock_score import score_stocks
+from src.v2.sector_score import score_sectors
+from src.v1.stock_score import score_stocks
 
 logger = logging.getLogger("quant-collector.analyzer")
 

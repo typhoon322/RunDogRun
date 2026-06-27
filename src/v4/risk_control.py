@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import config
-from src.v1_3_signal.entry_exit import (
+from src.v1.signal_engine import (
     compute_indicators,
     detect_entry_breakout,
     detect_entry_pullback,

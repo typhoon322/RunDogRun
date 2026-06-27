@@ -17,8 +17,8 @@ logger = get_logger("main")
 
 
 def run_pipeline(date_str: str) -> int:
-    """运行完整 v1-v6 管道"""
-    from src.engine.pipeline import run
+    """运行完整 v1-v8 管道"""
+    from src.core.pipeline import run
     output = run(date_str)
     quality = output.get("data_quality", "ok")
     if quality == "failed":
@@ -36,21 +36,21 @@ def run_single_step(date_str: str, step: str) -> int:
         return 2
 
     if step == "analyze":
-        from src.v2_sector.sector_score import score_sectors
-        from src.v1_2_stock.stock_score import score_stocks
-        from src.engine.analyzer import analyze as _analyze
+        from src.v2.sector_score import score_sectors
+        from src.v1.stock_score import score_stocks
+        from src.core.analyzer import analyze as _analyze
         result = _analyze(date_str)
     elif step == "trade":
-        from src.v1_4_risk.risk_control import trade
+        from src.v4.risk_engine import trade
         result = trade(date_str)
     elif step == "cycle":
-        from src.v2_sector.sector_cycle import analyze_cycle
+        from src.v2.sector_cycle import analyze_cycle
         result = analyze_cycle(date_str)
     elif step == "execute":
-        from src.v5_regime.trade_executor import execute
+        from src.v5.trade_executor import execute
         result = execute(date_str)
     elif step == "regime":
-        from src.v5_regime.market_regime import analyze_regime
+        from src.v5.regime_detector import analyze_regime
         result = analyze_regime(date_str)
     else:
         logger.error(f"未知步骤: {step}")
@@ -112,8 +112,8 @@ def main() -> int:
     if mode == "pipeline":
         return run_pipeline(date_str)
     elif mode == "backtest":
-        from src.v7_backtest.backtest_engine import run_backtest
-        from src.v7_backtest.optimizer import walk_forward_validation
+        from src.v7.backtest_engine import run_backtest
+        from src.v7.optimizer import walk_forward_validation
 
         logger.info(f"v7 回测: {date_str}")
         bt = run_backtest("2026-01-01", date_str, config.DATA_DIR)
@@ -133,7 +133,7 @@ def main() -> int:
                     f"overfit={wf.get('overfit_risk')}")
         return 0
     elif mode == "train":
-        from src.v8_agent.rl_agent import train_agent
+        from src.v8.rl_agent import train_agent
 
         logger.info("v8 RL Agent 训练...")
         result = train_agent(config.DATA_DIR, episodes=30)
