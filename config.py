@@ -268,3 +268,41 @@ BREADTH_MEDIUM = 0.40          # 中扩散阈值
 # -- 稳定性标准差阈值 --
 STABILITY_LOW_SIGMA = 1.5      # 低波动标准差
 STABILITY_HIGH_SIGMA = 4.0     # 高波动标准差
+
+
+# ============================================================
+# v1.3/v1.4 交易信号 + 仓位风控配置
+# ============================================================
+
+# -- 买入信号阈值 --
+SIGNAL_BREAKOUT_VOL_RATIO = 1.5   # 突破买入最低量比
+SIGNAL_PULLBACK_VOL_MAX = 0.9     # 回踩买入最高量比 (缩量)
+SIGNAL_PULLBACK_VOL_MIN = 0.3     # 回踩最低量比
+SIGNAL_SECTOR_UPGRADE_MIN = 6     # 板块晋级阈值
+SIGNAL_MA_PERIOD_SHORT = 10       # 短期均线周期
+SIGNAL_MA_PERIOD_LONG = 20        # 长期均线周期
+SIGNAL_HIGH_LOOKBACK = 5          # 前高回看天数
+
+# -- 卖出信号阈值 --
+SIGNAL_EXIT_VOL_SPIKE = 3.0       # 巨量卖出量比阈值
+SIGNAL_EXIT_STAG_RETURN_MAX = 3.0 # 滞涨最大涨幅
+SIGNAL_EXIT_SCORE_WEAK = 5        # 弱于板块的个股score阈值
+SIGNAL_SECTOR_DANGER = 5          # 板块危险阈值
+
+# -- 仓位分配 --
+POSITION_MAX_SINGLE = 0.30        # 单票上限 30%
+POSITION_A_PLUS = (0.25, 0.30)    # A+ 仓位区间
+POSITION_A = (0.15, 0.25)         # A 仓位区间
+POSITION_B = (0.05, 0.15)         # B 仓位区间
+POSITION_C = 0.05                 # C 试仓固定比例
+POSITION_MAX_COUNT = 5            # 最大持仓数
+POSITION_MAX_SECTOR_EXPOSURE = 0.40  # 板块集中度上限
+
+# -- 止损规则 --
+STOP_LOSS_PCT = -0.10             # 固定止损线 -10%
+STOP_LOSS_PCT_AGGRESSIVE = -0.08  # 激进止损线 -8%
+STOP_LOSS_PCT_WIDE = -0.12        # 宽止损线 -12%
+
+# -- 极端风险降仓 --
+RISK_EXTREME_MAX_EXPOSURE = 0.30  # 极端风险下最大总仓位
+RISK_EXTREME_SENTIMENT = "high"   # 触发降仓的情绪等级

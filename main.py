@@ -195,6 +195,7 @@ def main() -> int:
     date_str = config.today_cn()
     check_only = False
     analyze_mode = False
+    trade_mode = False
 
     args = sys.argv[1:]
     i = 0
@@ -208,11 +209,15 @@ def main() -> int:
         elif args[i] == "--analyze":
             analyze_mode = True
             i += 1
+        elif args[i] == "--trade":
+            trade_mode = True
+            i += 1
         elif args[i] == "--help":
-            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze]")
+            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze] [--trade]")
             print("  --date        指定日期 (默认今天)")
             print("  --check-only  仅检查是否为交易日")
             print("  --analyze     运行 v1.1+v1.2 双层评分系统")
+            print("  --trade       运行 v1.3+v1.4 交易信号+仓位风控")
             return 0
         else:
             i += 1
@@ -235,6 +240,30 @@ def main() -> int:
 
         logger.info(f"分析完成: {result['snapshot'].get('candidate_count', 0)} 个候选")
         logger.info(f"输出: {watchlist_path}")
+        return 0
+
+    # 交易模式: 需要数据 + 评分结果
+    if trade_mode:
+        from src.trade_engine import trade
+
+        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
+            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json")
+            return 2
+
+        logger.info(f"开始交易信号分析: {date_str}")
+        result = trade(date_str)
+
+        # 保存交易建议
+        trade_path = f"{config.DATA_DIR}/{date_str}_trade.json"
+        with open(trade_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        summary = result.get("summary", {})
+        logger.info(
+            f"交易分析完成: BUY{summary.get('entry_count',0)} "
+            f"HOLD{summary.get('hold_count',0)} SELL{summary.get('exit_count',0)}"
+        )
+        logger.info(f"输出: {trade_path}")
         return 0
 
     # 交易日检查
