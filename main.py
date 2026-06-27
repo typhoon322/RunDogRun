@@ -198,6 +198,7 @@ def main() -> int:
     trade_mode = False
     cycle_mode = False
     execute_mode = False
+    regime_mode = False
 
     args = sys.argv[1:]
     i = 0
@@ -220,17 +221,18 @@ def main() -> int:
         elif args[i] == "--execute":
             execute_mode = True
             i += 1
+        elif args[i] == "--regime":
+            regime_mode = True
+            i += 1
         elif args[i] == "--help":
-            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze] [--trade] [--cycle] [--execute]")
+            print("用法: python main.py [--date YYYY-MM-DD] [--check-only] [--analyze] [--trade] [--cycle] [--execute] [--regime]")
             print("  --date        指定日期 (默认今天)")
             print("  --check-only  仅检查是否为交易日")
             print("  --analyze     运行 v1.1+v1.2 双层评分系统")
             print("  --trade       运行 v1.3+v1.4 交易信号+仓位风控")
             print("  --cycle       运行 v2 板块轮动周期模型")
             print("  --execute     运行 v3+v4 终极执行分析")
-            print("  --analyze     运行 v1.1+v1.2 双层评分系统")
-            print("  --trade       运行 v1.3+v1.4 交易信号+仓位风控")
-            print("  --cycle       运行 v2 板块轮动周期模型")
+            print("  --regime      运行 v5 市场状态识别")
             return 0
         else:
             i += 1
@@ -327,6 +329,28 @@ def main() -> int:
             + (f", 第一:{top['name']}({top['life_cycle_label']})" if top else "")
         )
         logger.info(f"输出: {exec_path}")
+        return 0
+
+    # 市场状态模式: v5 识别市场 + 切换策略
+    if regime_mode:
+        from src.regime_engine import analyze_regime
+
+        if not os.path.exists(f"{config.DATA_DIR}/{date_str}.json"):
+            logger.error(f"当日数据不存在: {config.DATA_DIR}/{date_str}.json")
+            return 2
+
+        logger.info(f"开始市场状态识别: {date_str}")
+        result = analyze_regime(date_str)
+
+        regime_path = f"{config.DATA_DIR}/{date_str}_regime.json"
+        with open(regime_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        logger.info(
+            f"市场状态: {result.get('regime_label','?')}({result.get('regime_score',0)}), "
+            f"模式{result.get('strategy_mode','?')}, {result.get('action','?')}"
+        )
+        logger.info(f"输出: {regime_path}")
         return 0
 
     # 交易日检查
