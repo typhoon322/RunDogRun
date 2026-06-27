@@ -150,7 +150,7 @@ def collect_all(date_str: str) -> dict[str, Any]:
         result["quality_metrics"] = quality.get("metrics", {})
     except Exception as e:
         logger.error(f"数据校验失败: {e}")
-        result["data_quality"] = "error"
+        result["data_quality"] = "failed"
         result["quality_issues"] = [{"severity": "error", "message": str(e)}]
         result["quality_metrics"] = {}
 
@@ -233,7 +233,7 @@ def main() -> int:
 
     # 退出码
     quality = result.get("data_quality", "ok")
-    if quality == "error":
+    if quality == "failed":
         return 2
     elif quality == "warning":
         return 1

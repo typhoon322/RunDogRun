@@ -23,7 +23,7 @@ def validate_data(
 
     Returns:
         {data_quality, issues, metrics}
-          data_quality: "ok" | "warning" | "error"
+          data_quality: "ok" | "warning" | "failed"
     """
     issues = []
     metrics = {}
@@ -48,7 +48,7 @@ def validate_data(
     warning_count = sum(1 for i in issues if i["severity"] == "warning")
 
     if error_count > 0:
-        data_quality = "error"
+        data_quality = "failed"
     elif warning_count > 0:
         data_quality = "warning"
     else:
