@@ -98,13 +98,13 @@ if portfolio:
         st.dataframe(df, use_container_width=True,
                      column_config={"weight": st.column_config.NumberColumn(format="%.1f%%")})
 
-# ── 系统使用说明书 ──
+# ── 使用说明书 ──
 st.divider()
-st.subheader("📖 系统使用说明书")
+st.subheader("📖 使用说明书")
 
 import os as _os
-if _os.path.exists("docs/design.md"):
-    with open("docs/design.md", "r", encoding="utf-8") as _f:
+if _os.path.exists("docs/user_manual.md"):
+    with open("docs/user_manual.md", "r", encoding="utf-8") as _f:
         st.markdown(_f.read())
 else:
     st.info("说明书文件加载中...")
