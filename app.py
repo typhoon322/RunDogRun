@@ -98,16 +98,17 @@ if portfolio:
         st.dataframe(df, use_container_width=True,
                      column_config={"weight": st.column_config.NumberColumn(format="%.1f%%")})
 
+# ── 系统使用说明书 ──
+st.divider()
+st.subheader("📖 系统使用说明书")
+
+import os as _os
+if _os.path.exists("docs/design.md"):
+    with open("docs/design.md", "r", encoding="utf-8") as _f:
+        st.markdown(_f.read())
+else:
+    st.info("说明书文件加载中...")
+
 # ── 更新信息 ──
 st.divider()
-
-# 系统设计说明书
-with st.expander("📖 系统设计说明书"):
-    import os as _os
-    if _os.path.exists("docs/design.md"):
-        with open("docs/design.md", "r", encoding="utf-8") as _f:
-            st.markdown(_f.read())
-
-st.caption(f"数据: {data.get('date', '?')} · "
-           f"系统: v2.5.2 · "
            f"[GitHub](https://github.com/typhoon322/RunDogRun)")
