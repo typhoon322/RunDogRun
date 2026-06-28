@@ -8,6 +8,9 @@ import os
 import sys
 from datetime import datetime
 
+# 确保脚本目录在 path 中
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 def check() -> int:
     """返回 0=正常, 1=警告, 2=错误"""
@@ -66,10 +69,19 @@ def check() -> int:
         warnings.append("⚠️ 快照目录不存在")
 
     # ── 通知推送 ──
-    from scripts.notify import send_wechat, build_report
-    title, body = build_report(errors, warnings)
+    title = "📊 系统巡检 " + today
+    if errors:
+        title = "❌ 系统异常 " + today
+    elif warnings:
+        title = "⚠️ 系统警告 " + today
+
+    # 保存通知文件
+    os.makedirs("data/outputs", exist_ok=True)
+    msg = {"title": title, "errors": errors, "warnings": warnings, "time": datetime.now().isoformat()}
+    with open("data/outputs/notification.json", "w", encoding="utf-8") as f:
+        json.dump(msg, f, ensure_ascii=False, indent=2)
+
     print(f"\n📡 {title}")
-    send_wechat(title, body)
 
     # ── 结论 ──
     print("─" * 40)
