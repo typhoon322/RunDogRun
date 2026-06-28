@@ -65,6 +65,12 @@ def check() -> int:
     else:
         warnings.append("⚠️ 快照目录不存在")
 
+    # ── 通知推送 ──
+    from scripts.notify import send_wechat, build_report
+    title, body = build_report(errors, warnings)
+    print(f"\n📡 {title}")
+    send_wechat(title, body)
+
     # ── 结论 ──
     print("─" * 40)
     if errors:
