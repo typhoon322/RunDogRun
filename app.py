@@ -11,6 +11,13 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+# v2.6.1 持仓分析
+try:
+    from portfolio.analyze_portfolio import build_portfolio_report
+    HAS_PORTFOLIO = True
+except ImportError:
+    HAS_PORTFOLIO = False
+
 st.set_page_config(page_title="v2.5 Monitor", page_icon="📊", layout="wide")
 st.title("📊 v2.5 策略监控仪表盘")
 st.caption(f"自动更新 · {datetime.now().strftime('%Y-%m-%d %H:%M')}")
@@ -136,6 +143,53 @@ if daily_report:
         with st.expander("💬 微信快速版 (可复制)"):
             with open(wx_path, encoding="utf-8") as f:
                 st.code(f.read(), language=None)
+
+    # ═══════════════════════════════════════════
+    # v2.6.1 持仓偏离分析
+    # ═══════════════════════════════════════════
+    try:
+        holdings_path = "data/holdings.json"
+        uni_path = "data/universe_cache.json"
+        if os.path.exists(holdings_path) and os.path.exists(uni_path):
+            with open(holdings_path) as f:
+                my_holdings = json.load(f)
+            with open(uni_path) as f:
+                uni_data = json.load(f)
+            universe_codes = uni_data if isinstance(uni_data, list) else uni_data.get("codes", [])
+
+            from portfolio.analyze_portfolio import build_portfolio_report
+            pa = build_portfolio_report(my_holdings, universe_codes[:150])
+
+            dev = pa.get("deviation", {})
+            score = pa.get("deviation_score", {})
+
+            st.divider()
+            st.subheader("🧠 持仓偏离分析")
+
+            c1, c2, c3 = st.columns(3)
+            c1.metric("偏离评分", f"{score.get('score', 0)}/100", delta=score.get("level", ""))
+            c2.metric("持仓数量", pa.get("holdings_count", 0))
+            c3.metric("Universe", pa.get("universe_size", 0))
+
+            # 偏离雷达 — 用 bar chart 展示前8大偏离
+            if dev:
+                # 排除"未知"后取Top偏离
+                dev_clean = {k: v for k, v in dev.items() if k != "未知"}
+                top_dev = dict(sorted(dev_clean.items(), key=lambda x: abs(x[1]), reverse=True)[:8])
+                if top_dev:
+                    with st.expander("📊 行业偏离 (正值=超配, 负值=低配)"):
+                        st.bar_chart(top_dev, use_container_width=True)
+
+            # 持仓明细
+            parsed = pa.get("holdings", [])
+            if parsed:
+                with st.expander(f"📋 持仓明细 ({len(parsed)} 只)"):
+                    import pandas as pd
+                    df = pd.DataFrame(parsed)
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    except Exception as e:
+        st.caption(f"⚠️ 持仓分析暂不可用: {e}")
 
 else:
     st.info("📡 日報尚未生成。Pipeline 将在 GitHub Actions 每日自动执行。\n\n"
