@@ -13,13 +13,17 @@ logger = logging.getLogger("v2")
 
 
 def run(top_n: int = 5):
+    from v2_final.core.pipeline_logger import PipelineLogger
+    plog = PipelineLogger()
     logger.info(f"v2.5 启动 — Top {top_n}")
 
     # ── v2.4 市场状态过滤 ──
     from v2_final.strategy.market_state import get_market_state
     market_state = get_market_state()
+    plog.ok("market_state", market_state)
 
     if market_state == "NO_TRADE":
+        plog.skip("pipeline", "market NO_TRADE")
         logger.warning("市场状态 NO_TRADE — 跳过交易")
         from v2_final.report.daily_report import generate_report, save_report, print_summary
         report = generate_report("MARKET", {"action": "HOLD"}, {},
@@ -31,6 +35,7 @@ def run(top_n: int = 5):
     # ── 数据 ──
     from v2_final.data.provider import get_market_data
     data = get_market_data()
+    plog.ok("fetch_data", f"{len(data['stocks'])} stocks")
     if not data["stocks"]:
         logger.error("无数据")
         return
@@ -41,8 +46,10 @@ def run(top_n: int = 5):
 
     sector_rank = calc_sector_strength(data["sectors"])
     strong_sectors = get_strong_sectors(data["sectors"], top_n=5)
+    plog.ok("sector_filter", f"{len(strong_sectors)} strong")
     filtered = filter_stocks_by_sector(data["stocks"], strong_sectors,
                                         max_price=60, min_momentum=1.5)
+    plog.ok("stock_filter", f"{len(filtered)} candidates")
 
     if len(filtered) < top_n:
         logger.warning(f"候选不足: {len(filtered)} < {top_n}")
@@ -53,7 +60,9 @@ def run(top_n: int = 5):
     from v2_final.strategy.allocation import allocate_portfolio
 
     ranked = rank_stocks(filtered, sector_rank, top_n=top_n * 4)
+    plog.ok("ranking", f"{len(ranked)} ranked")
     portfolio = allocate_portfolio(ranked, top_n=top_n)
+    plog.ok("allocation", f"{len(portfolio)} stocks")
 
     print()
     print("┌─ 组合持仓 ────────────────────────")
@@ -115,6 +124,10 @@ def run(top_n: int = 5):
     from v2_final.report.daily_report import generate_markdown
     generate_markdown(report)
     print_summary(report)
+
+    # 管道完成
+    plog.ok("report", f"status={result['status']} score={result['health_score']}")
+    plog.save()
 
     # 最终结论
     if result["status"] == "STOP":

@@ -39,12 +39,21 @@ print(f'Validation: {result[\"valid\"]}/{result[\"total\"]} OK')
       - name: Step 3 — Run v2.5 pipeline (fast backtest from cache)
         run: python main.py --top 5
 
-      - name: Commit data cache
+      - name: Debug — Check outputs
+        run: |
+          echo "=== Files ==="
+          ls -la data/outputs/ 2>/dev/null || echo "no outputs dir"
+          echo "=== Report ==="
+          cat data/outputs/daily_report.json 2>/dev/null || echo "NO REPORT"
+          echo "=== Pipeline ==="
+          cat data/outputs/pipeline_log.json 2>/dev/null || echo "NO PIPELINE LOG"
+
+      - name: Commit data cache + outputs
         run: |
           git config user.name "data-bot"
           git config user.email "data@bot.local"
-          git add data/raw/ || true
-          git commit -m "📦 数据缓存更新 $(date +%Y-%m-%d)" || echo "no cache changes"
+          git add data/raw/ data/outputs/ state/ || true
+          git commit -m "📊 数据+报告更新 $(date +%Y-%m-%d)" || echo "no changes"
           git push || echo "push skipped"
 
       - name: Upload daily report

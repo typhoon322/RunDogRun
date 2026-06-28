@@ -17,12 +17,32 @@ st.set_page_config(page_title="v2.5 Monitor", page_icon="📊", layout="wide")
 st.title("📊 v2.5 策略监控仪表盘")
 st.caption(f"自动更新 · {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
-# ── 加载数据 ──
+# ── 文件校验 + Pipeline 状态 ──
 REPORT_PATH = "data/outputs/daily_report.json"
+PIPELINE_PATH = "data/outputs/pipeline_log.json"
+
+col1, col2 = st.columns(2)
+col1.write(f"📄 report.json: {'✅' if os.path.exists(REPORT_PATH) else '❌ 缺失'}")
+col2.write(f"📄 pipeline_log: {'✅' if os.path.exists(PIPELINE_PATH) else '❌ 缺失'}")
+
+if os.path.exists(PIPELINE_PATH):
+    with open(PIPELINE_PATH, "r") as f:
+        pipeline = json.load(f)
+    steps = pipeline.get("steps", [])
+    with st.expander("🔧 Pipeline 执行详情"):
+        pcols = st.columns(4)
+        pcols[0].metric("总步骤", pipeline.get("total", 0))
+        pcols[1].metric("✅ OK", pipeline.get("ok_count", 0))
+        pcols[2].metric("❌ Fail", pipeline.get("fail_count", 0))
+        for s in steps[-10:]:
+            icon = {"ok": "✅", "fail": "❌", "skip": "⏭"}.get(s["status"], "❓")
+            st.caption(f"{icon} `{s['step']}` {s.get('detail','')} ({s.get('time','')})")
 
 if not os.path.exists(REPORT_PATH):
-    st.warning("尚无报告数据, 等待 GitHub Actions 首次运行")
+    st.error("❌ report.json 不存在 — 请检查 GitHub Actions 是否成功执行")
     st.stop()
+
+# ── 加载报告数据 ──
 
 with open(REPORT_PATH, "r") as f:
     data = json.load(f)
