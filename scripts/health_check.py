@@ -21,8 +21,10 @@ def check() -> int:
     print(f"🔍 系统巡检 — {today}")
     print("─" * 40)
 
-    # 1. Pipeline 日志
+    # 1. Pipeline 日志 (双路径检查)
     pipeline_path = "data/outputs/pipeline_log.json"
+    if not os.path.exists(pipeline_path):
+        pipeline_path = "output/pipeline_log.json"
     if not os.path.exists(pipeline_path):
         errors.append("❌ pipeline_log.json 不存在 — Actions 可能未执行")
     else:
@@ -37,8 +39,10 @@ def check() -> int:
         if total == 0:
             errors.append("❌ Pipeline 步骤数为0")
 
-    # 2. 日报
+    # 2. 日报 (双路径检查)
     report_path = "data/outputs/daily_report.json"
+    if not os.path.exists(report_path):
+        report_path = "output/daily_report.json"
     if not os.path.exists(report_path):
         errors.append("❌ daily_report.json 不存在")
     else:

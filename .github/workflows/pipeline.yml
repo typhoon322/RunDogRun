@@ -1,0 +1,38 @@
+name: Pipeline v2.5 Final — 闭环流水线
+
+on:
+  schedule:
+    # 每天 UTC 14:00 (北京时间 22:00, 收盘后)
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install akshare pandas
+
+      - name: Run Pipeline
+        run: python pipeline/run_pipeline.py --top 5
+
+      - name: Commit & Push results
+        run: |
+          git config user.name "pipeline-bot"
+          git config user.email "pipeline@bot.local"
+          git add output/ data/outputs/ data/raw/daily/ || true
+          git commit -m "📊 Pipeline $(date +%Y-%m-%d)" || echo "no changes"
+          git push
