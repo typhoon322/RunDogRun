@@ -20,8 +20,25 @@ jobs:
       - name: Install dependencies
         run: pip install akshare pandas
 
-      - name: Run v2.2 pipeline (backtest + live signal + report)
-        run: python main.py --symbol 000001
+      - name: Step 1 — Update data cache (incremental)
+        run: python -c "
+from v2_final.data.collector import batch_collect
+# 缓存核心标的: 上证 + 常用股票池
+codes = ['000001','600036','601398','600519','300750','000858','600030']
+batch_collect(codes)
+print('Data cache ready')
+"
+
+      - name: Step 2 — Run v2.5 pipeline (fast backtest from cache)
+        run: python main.py --top 5
+
+      - name: Commit data cache
+        run: |
+          git config user.name "data-bot"
+          git config user.email "data@bot.local"
+          git add data/raw/ || true
+          git commit -m "📦 数据缓存更新 $(date +%Y-%m-%d)" || echo "no cache changes"
+          git push || echo "push skipped"
 
       - name: Upload daily report
         uses: actions/upload-artifact@v4

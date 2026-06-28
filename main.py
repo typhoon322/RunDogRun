@@ -62,11 +62,14 @@ def run(top_n: int = 5):
               f"score={p['score']:.1f} w={p['weight']:.0%}  ¥{p['price']}")
     print("└──────────────────────────────────")
 
-    # ── v2.3 组合回测 ──
-    from v2_final.backtest.portfolio_bt import backtest_portfolio, fetch_prices_for_portfolio
-    logger.info("拉取历史价格...")
-    price_data = fetch_prices_for_portfolio(portfolio)
-    bt = backtest_portfolio(portfolio, price_data)
+    # ── v2.3 组合回测 (优先本地缓存) ──
+    from v2_final.backtest.fast_backtest import backtest_from_cache
+    from v2_final.data.collector import get_cache_stats
+
+    cache_stats = get_cache_stats()
+    logger.info(f"数据仓库: {cache_stats['cached_stocks']} 只缓存({cache_stats['total_size_kb']:.0f}KB)")
+
+    bt = backtest_from_cache(portfolio)
     m = bt["metrics"]
 
     print(f"\n  回测: {m['total_return']:+.1f}%  dd={m['max_drawdown']:.1f}%  "
