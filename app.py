@@ -111,4 +111,5 @@ else:
 
 # ── 更新信息 ──
 st.divider()
+st.caption(f"数据: {data.get('date', '?')} · 系统: v2.5.2 · "
            f"[GitHub](https://github.com/typhoon322/RunDogRun)")
