@@ -98,14 +98,37 @@ if portfolio:
         st.dataframe(df, use_container_width=True,
                      column_config={"weight": st.column_config.NumberColumn(format="%.1f%%")})
 
-# ── 使用说明书 ──
+# ── 数据资产面板 ──
 st.divider()
-st.subheader("📖 使用说明书")
+st.subheader("📦 数据资产")
 
 import os as _os
-if _os.path.exists("docs/user_manual.md"):
-    with open("docs/user_manual.md", "r", encoding="utf-8") as _f:
-        st.markdown(_f.read())
+csv_count = len([f for f in _os.listdir("data/raw/daily") if f.endswith(".csv")]) if _os.path.exists("data/raw/daily") else 0
+registry_ok = _os.path.exists("data/registry.json")
+
+col_a, col_b, col_c = st.columns(3)
+col_a.metric("CSV 数据仓库", f"{csv_count} 只", delta="已注册")
+col_b.metric("Registry", "✅ 在线" if registry_ok else "⚠ 待同步")
+col_c.metric("历史数据", "~137 天/只")
+
+if registry_ok:
+    import json
+    with open("data/registry.json") as _f:
+        reg = json.load(_f)
+    last = reg.get("last_audit", {})
+    with st.expander("📋 数据调度详情"):
+        st.write(f"CSV 总量: {reg.get('csv_total', 0)}")
+        st.write(f"Universe: {reg.get('universe_count', 0)}")
+        st.write(f"回测使用: {reg.get('used_count', 0)}")
+        if last:
+            st.write(f"吸收率: {last.get('absorption_pct', 0)}%")
+            st.write(f"利用率: {last.get('utilization_pct', 0)}%")
+
+# ── 使用说明书 (折叠) ──
+with st.expander("📖 使用说明书"):
+    if _os.path.exists("docs/user_manual.md"):
+        with open("docs/user_manual.md", "r", encoding="utf-8") as _f:
+            st.markdown(_f.read())
 else:
     st.info("说明书文件加载中...")
 
