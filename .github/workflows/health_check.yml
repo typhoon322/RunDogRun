@@ -1,0 +1,25 @@
+name: Daily Health Check
+
+on:
+  schedule:
+    # 北京时间中午12:00 (UTC 04:00)
+    - cron: "0 4 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run health check
+        run: python scripts/health_check.py
+
+      - name: Alert on failure
+        if: failure()
+        run: |
+          echo "❌ 系统巡检失败！"
+          echo "请检查 GitHub Actions 最近一次运行日志"
+          echo "Repo: https://github.com/typhoon322/RunDogRun/actions"
