@@ -112,6 +112,8 @@ def run(top_n: int = 5):
         "note": result["note"],
     }
     save_report(report)
+    from v2_final.report.daily_report import generate_markdown
+    generate_markdown(report)
     print_summary(report)
 
     # 最终结论

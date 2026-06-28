@@ -56,6 +56,48 @@ def save_report(report: dict, path: str = "data/outputs/daily_report.json") -> s
     return path
 
 
+def generate_markdown(report: dict) -> str:
+    """生成 Markdown 日报 (用于 Streamlit 展示)"""
+    bt = report.get("backtest", {})
+    monitor = report.get("monitor", {})
+
+    lines = [
+        f"# 📊 v2.5 策略日报 — {report['date']}",
+        "",
+        f"## 状态: {monitor.get('status', '?')}",
+        f"健康评分: **{monitor.get('health_score', 0)}/100** {monitor.get('rating', '')}",
+        f"趋势: {monitor.get('trend', '')}",
+        "",
+        "## 📈 回测绩效",
+        f"- 总收益: {bt.get('total_return_pct', 0):+.1f}%",
+        f"- 最大回撤: {bt.get('max_drawdown_pct', 0):.1f}%",
+        f"- 胜率: {bt.get('win_rate', 0):.0%}",
+        "",
+        "## 📦 当前信号",
+    ]
+
+    signal = report.get("signal", {})
+    if isinstance(signal.get("portfolio"), list):
+        for p in signal["portfolio"]:
+            lines.append(f"- {p.get('code', '?')} {p.get('name', '?')} "
+                        f"权重 {p.get('weight', 0):.0%}")
+
+    status = monitor.get("status", "?")
+    lines.append("")
+    lines.append(f"## 建议: {monitor.get('note', '')}")
+    lines.append("")
+    lines.append("---")
+    lines.append("*自动生成于 v2.5 策略监控系统*")
+
+    md = "\n".join(lines)
+    path = "data/outputs/report.md"
+    from pathlib import Path
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(md)
+    return path
+
+
 def print_summary(report: dict) -> None:
     """控制台友好摘要"""
     bt = report.get("backtest", {})
