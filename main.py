@@ -117,6 +117,26 @@ def run(top_n: int = 5):
           f"vol={result['breakdown']['volatility_score']}")
     print(f"  建议: {result['note']}")
 
+    # ── v2.6 归因分析 ──
+    from core.attribution import stock_attribution, sector_attribution, time_segment_attribution
+    from core.data_consistency import check_csv_integrity, check_universe_alignment
+
+    attr = stock_attribution(portfolio, price_data)
+    if attr:
+        top3 = attr[:3]
+        print(f"\n  个股贡献 Top3: {top3[0]['name']}({top3[0]['contribution']:+.1f}%) "
+              f"{top3[1]['name']}({top3[1]['contribution']:+.1f}%) "
+              f"{top3[2]['name']}({top3[2]['contribution']:+.1f}%)")
+
+    sectors = sector_attribution(portfolio, price_data)
+    if sectors:
+        print(f"  行业Top: {' | '.join(s['sector']+f\"({s['share_pct']:.0f}%)\" for s in sectors[:3])}")
+
+    # ── v2.7 一致性检查 ──
+    csv_check = check_csv_integrity()
+    align = check_universe_alignment(universe)
+    plog.ok("consistency", f"csv={csv_check['ok']}/{csv_check['total']} align={align['align_pct']}%")
+
     # ── 日报 ──
     from v2_final.report.daily_report import generate_report, save_report, print_summary
     report = generate_report(
