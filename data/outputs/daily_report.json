@@ -1,8 +1,8 @@
 {
   "date": "2026-06-28",
-  "timestamp": "2026-06-28T22:47:48.579756",
+  "timestamp": "2026-06-28T23:00:50.141050",
   "version": "2.2.0",
-  "symbol": "PORTFOLIO-3",
+  "symbol": "PORTFOLIO-5",
   "live_signal": {
     "portfolio": [
       {
@@ -10,29 +10,43 @@
         "name": "节能风电",
         "price": 3.94,
         "score": 10.24,
-        "weight": 0.356
+        "weight": 0.233
       },
       {
         "code": "688432",
         "name": "有研硅",
         "price": 30.9,
         "score": 9.05,
-        "weight": 0.331
+        "weight": 0.206
       },
       {
         "code": "002141",
         "name": "贤丰控股",
         "price": 5.76,
         "score": 8.55,
-        "weight": 0.313
+        "weight": 0.194
+      },
+      {
+        "code": "002225",
+        "name": "濮耐股份",
+        "price": 4.62,
+        "score": 8.23,
+        "weight": 0.187
+      },
+      {
+        "code": "300088",
+        "name": "长信科技",
+        "price": 11.67,
+        "score": 7.95,
+        "weight": 0.181
       }
     ],
     "metrics": {
-      "total_return": 63.57,
-      "max_drawdown": 54.79,
-      "sharpe": 0.66,
-      "win_rate": 0.51,
-      "volatility": 1.81
+      "total_return": -1.61,
+      "max_drawdown": 20.0,
+      "sharpe": 0.0,
+      "win_rate": 0.5,
+      "volatility": 1.35
     },
     "status": "CAUTION"
   },
@@ -40,7 +54,7 @@
     "total_return_pct": 0,
     "annual_return_pct": 0,
     "max_drawdown_pct": 0,
-    "win_rate": 0.51,
+    "win_rate": 0.5,
     "avg_win_pct": 0,
     "avg_loss_pct": 0,
     "total_trades": 0
