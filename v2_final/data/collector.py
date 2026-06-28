@@ -9,7 +9,8 @@ from pathlib import Path
 
 logger = logging.getLogger("v2.collector")
 
-DATA_DIR = "data/raw"
+DATA_DIR = "data/raw/daily"
+META_DIR = "data/meta"
 
 
 def ensure_dir() -> None:

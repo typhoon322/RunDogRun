@@ -23,13 +23,20 @@ jobs:
       - name: Step 1 — Update data cache (incremental)
         run: python -c "
 from v2_final.data.collector import batch_collect
-# 缓存核心标的: 上证 + 常用股票池
 codes = ['000001','600036','601398','600519','300750','000858','600030']
 batch_collect(codes)
 print('Data cache ready')
 "
 
-      - name: Step 2 — Run v2.5 pipeline (fast backtest from cache)
+      - name: Step 2 — Validate data quality
+        run: python -c "
+from v2_final.data.validate import validate_directory
+result = validate_directory('data/raw/daily')
+assert result['invalid'] == 0, f'Data validation failed: {result[\"errors\"]}'
+print(f'Validation: {result[\"valid\"]}/{result[\"total\"]} OK')
+"
+
+      - name: Step 3 — Run v2.5 pipeline (fast backtest from cache)
         run: python main.py --top 5
 
       - name: Commit data cache

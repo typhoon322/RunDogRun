@@ -1,7 +1,7 @@
 """
 v2_final/backtest/fast_backtest.py — 本地缓存快速回测
 =========================================================
-read data/raw/*.csv → weighted portfolio backtest
+read data/raw/daily/*.csv → weighted portfolio backtest
 比 AKShare 实时请求快 10-50x
 """
 import logging
@@ -17,7 +17,7 @@ def backtest_from_cache(
     start_date: str = "20230101",
 ) -> dict[str, Any]:
     """
-    从本地 data/raw/ CSV 读取历史, 执行组合回测。
+    从本地 data/raw/daily/ CSV 读取历史, 执行组合回测。
 
     Returns:
         {equity_curve, metrics}
