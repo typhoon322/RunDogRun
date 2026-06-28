@@ -72,6 +72,31 @@ def run(top_n: int = 5):
     print(f"\n  回测: {m['total_return']:+.1f}%  dd={m['max_drawdown']:.1f}%  "
           f"sharpe={m['sharpe']}  wr={m['win_rate']:.0%}")
 
+    # ── v2.5 策略健康监控 ──
+    from v2_final.analysis.rolling_stats import RollingStats
+    from v2_final.analysis.health_score import compute_health_score
+    from v2_final.utils.equity_tracker import EquityTracker
+
+    tracker = EquityTracker()
+    tracker.load()
+
+    # 更新净值追踪
+    for v in bt["equity_curve"]:
+        tracker.update(v)
+    tracker.save()
+
+    # 滚动统计
+    rolling = RollingStats(window=20)
+    rolling.update(bt["equity_curve"])
+    rstats = rolling.stats()
+
+    # 健康评分
+    health = compute_health_score({**m, "sharpe": m.get("sharpe", 0)})
+
+    print(f"  健康: {health['health_score']}/100 {health['rating']}")
+    print(f"  滚动20d: wr={rstats['win_rate']:.0%} vol={rstats['volatility']:.1%} sharpe={rstats['sharpe']}")
+    print(f"  净值追踪: {tracker.summary()['n_days']}天 dd={tracker.current_drawdown():.1f}%")
+
     # ── v2.5 策略门控 ──
     from v2_final.strategy.strategy_gate import get_verdict
     verdict = get_verdict(m)
