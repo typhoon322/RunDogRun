@@ -1,7 +1,7 @@
 """
-main.py — v2.3 多股票组合回测系统
-=====================================
-完整闭环: 全市场 → 排名 → 分仓 → 组合回测 → 绩效 → 日报
+main.py — v2.5 最终稳定版
+=============================
+闭环: 市场过滤 → 行业过滤 → 选股 → 排名 → 分仓 → 回测 → 策略评分 → 门控 → 日报
 
 用法: python main.py [--top 5]
 """
@@ -13,62 +13,77 @@ logger = logging.getLogger("v2")
 
 
 def run(top_n: int = 5):
-    logger.info(f"v2.3 组合回测 — Top {top_n}")
+    logger.info(f"v2.5 启动 — Top {top_n}")
 
-    # ── 1. 全市场数据 ──
+    # ── v2.4 市场状态过滤 ──
+    from v2_final.strategy.market_state import get_market_state
+    market_state = get_market_state()
+
+    if market_state == "NO_TRADE":
+        logger.warning("市场状态 NO_TRADE — 跳过交易")
+        from v2_final.report.daily_report import generate_report, save_report, print_summary
+        report = generate_report("MARKET", {"action": "HOLD"}, {},
+                                  {"action": "SKIP", "reason": "market NO_TRADE"})
+        save_report(report)
+        print_summary(report)
+        return
+
+    # ── 数据 ──
     from v2_final.data.provider import get_market_data
     data = get_market_data()
     if not data["stocks"]:
         logger.error("无数据")
         return
 
-    # ── 2. 板块强度 ──
+    # ── v2.4 行业过滤 ──
     from v2_final.strategy.sector import calc_sector_strength
+    from v2_final.strategy.sector_filter import get_strong_sectors, filter_stocks_by_sector
+
     sector_rank = calc_sector_strength(data["sectors"])
+    strong_sectors = get_strong_sectors(data["sectors"], top_n=5)
+    filtered = filter_stocks_by_sector(data["stocks"], strong_sectors,
+                                        max_price=60, min_momentum=1.5)
 
-    # ── 3. 评分排名 ──
-    from v2_final.strategy.ranker import rank_stocks
-    ranked = rank_stocks(data["stocks"], sector_rank, top_n=top_n * 4)
-    logger.info(f"排名: {len(ranked)} 候选")
-
-    if not ranked:
-        logger.warning("无符合条件的候选")
+    if len(filtered) < top_n:
+        logger.warning(f"候选不足: {len(filtered)} < {top_n}")
         return
 
-    # ── 4. 分仓分配 ──
+    # ── v2.3 排名 + 分仓 ──
+    from v2_final.strategy.ranker import rank_stocks
     from v2_final.strategy.allocation import allocate_portfolio
+
+    ranked = rank_stocks(filtered, sector_rank, top_n=top_n * 4)
     portfolio = allocate_portfolio(ranked, top_n=top_n)
 
     print()
     print("┌─ 组合持仓 ────────────────────────")
     for i, p in enumerate(portfolio):
         print(f"│ {i+1}. {p['name']:8s} {p['code']}  "
-              f"score={p['score']:.1f} weight={p['weight']:.0%}  ¥{p['price']}")
+              f"score={p['score']:.1f} w={p['weight']:.0%}  ¥{p['price']}")
     print("└──────────────────────────────────")
 
-    # ── 5. 组合回测 ──
+    # ── v2.3 组合回测 ──
     from v2_final.backtest.portfolio_bt import backtest_portfolio, fetch_prices_for_portfolio
-
     logger.info("拉取历史价格...")
     price_data = fetch_prices_for_portfolio(portfolio)
     bt = backtest_portfolio(portfolio, price_data)
-
     m = bt["metrics"]
+
+    print(f"\n  回测: {m['total_return']:+.1f}%  dd={m['max_drawdown']:.1f}%  "
+          f"sharpe={m['sharpe']}  wr={m['win_rate']:.0%}")
+
+    # ── v2.5 策略门控 ──
+    from v2_final.strategy.strategy_gate import get_verdict
+    verdict = get_verdict(m)
+
+    print(f"  策略评分: {verdict['score']}/3 → {verdict['verdict']}")
     print()
-    print(f"  组合回测: 收益 {m['total_return']:+.1f}%  回撤 {m['max_drawdown']:.1f}%  "
-          f"sharpe={m['sharpe']}  win_rate={m['win_rate']:.0%}  vol={m['volatility']:.1f}%")
 
-    # ── 6. 绩效分析 ──
-    from v2_final.analysis.performance import analyze_equity
-    perf = analyze_equity(bt["equity_curve"])
-    print(f"  绩效评分: {perf['score']:.0f}/100 ({perf['rating']})  sharpe={perf['sharpe']}")
-
-    # ── 7. 日报 ──
+    # ── 日报 ──
     from v2_final.report.daily_report import generate_report, save_report, print_summary
-
     report = generate_report(
         symbol=f"PORTFOLIO-{top_n}",
-        signal={"portfolio": portfolio, "metrics": m},
+        signal={"portfolio": portfolio, "metrics": m, "verdict": verdict},
         backtest_result=bt,
     )
     save_report(report)

@@ -1,6 +1,6 @@
 {
   "date": "2026-06-28",
-  "timestamp": "2026-06-28T15:57:06.218344",
+  "timestamp": "2026-06-28T16:06:41.268662",
   "version": "2.2.0",
   "symbol": "PORTFOLIO-3",
   "live_signal": {
@@ -33,6 +33,16 @@
       "sharpe": 1.19,
       "win_rate": 0.52,
       "volatility": 2.03
+    },
+    "verdict": {
+      "score": 1,
+      "should_trade": false,
+      "verdict": "SKIP — 策略质量不足",
+      "stats": {
+        "win_rate": 0.52,
+        "max_drawdown": 33.06,
+        "total_return": 118.2
+      }
     }
   },
   "backtest": {
