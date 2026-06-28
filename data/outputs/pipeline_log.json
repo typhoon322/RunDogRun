@@ -4,52 +4,70 @@
       "step": "pipeline_init",
       "status": "ok",
       "detail": "v2.5 pipeline started",
-      "time": "17:56:52"
+      "time": "22:45:07"
+    },
+    {
+      "step": "universe",
+      "status": "ok",
+      "detail": "156 stocks",
+      "time": "22:46:14"
+    },
+    {
+      "step": "sync_data",
+      "status": "ok",
+      "detail": "done",
+      "time": "22:46:18"
     },
     {
       "step": "market_state",
       "status": "ok",
       "detail": "OK_TRADE",
-      "time": "17:56:53"
+      "time": "22:46:19"
     },
     {
       "step": "fetch_data",
       "status": "ok",
       "detail": "5867 stocks",
-      "time": "17:58:23"
+      "time": "22:47:48"
     },
     {
       "step": "sector_filter",
       "status": "ok",
       "detail": "5 strong",
-      "time": "17:58:23"
+      "time": "22:47:48"
     },
     {
       "step": "stock_filter",
       "status": "ok",
       "detail": "552 candidates",
-      "time": "17:58:23"
+      "time": "22:47:48"
     },
     {
       "step": "ranking",
       "status": "ok",
       "detail": "12 ranked",
-      "time": "17:58:23"
+      "time": "22:47:48"
     },
     {
       "step": "allocation",
       "status": "ok",
       "detail": "3 stocks",
-      "time": "17:58:23"
+      "time": "22:47:48"
+    },
+    {
+      "step": "consistency",
+      "status": "ok",
+      "detail": "csv=413/414 reg=414",
+      "time": "22:47:48"
     },
     {
       "step": "report",
       "status": "ok",
       "detail": "status=CAUTION score=60",
-      "time": "17:58:23"
+      "time": "22:47:48"
     }
   ],
-  "total": 8,
-  "ok_count": 8,
+  "total": 11,
+  "ok_count": 11,
   "fail_count": 0
 }

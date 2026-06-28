@@ -1,6 +1,6 @@
 {
   "date": "2026-06-28",
-  "timestamp": "2026-06-28T17:58:23.966949",
+  "timestamp": "2026-06-28T22:47:48.579756",
   "version": "2.2.0",
   "symbol": "PORTFOLIO-3",
   "live_signal": {
@@ -28,11 +28,11 @@
       }
     ],
     "metrics": {
-      "total_return": 97.17,
-      "max_drawdown": 36.4,
-      "sharpe": 1.07,
-      "win_rate": 0.52,
-      "volatility": 1.97
+      "total_return": 63.57,
+      "max_drawdown": 54.79,
+      "sharpe": 0.66,
+      "win_rate": 0.51,
+      "volatility": 1.81
     },
     "status": "CAUTION"
   },
@@ -40,7 +40,7 @@
     "total_return_pct": 0,
     "annual_return_pct": 0,
     "max_drawdown_pct": 0,
-    "win_rate": 0.52,
+    "win_rate": 0.51,
     "avg_win_pct": 0,
     "avg_loss_pct": 0,
     "total_trades": 0
