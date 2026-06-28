@@ -130,7 +130,11 @@ def run(top_n: int = 5):
 
     sectors = sector_attribution(portfolio, price_data)
     if sectors:
-        print(f"  行业Top: {' | '.join(s['sector']+f\"({s['share_pct']:.0f}%)\" for s in sectors[:3])}")
+        # 行业Top 打印
+        top_labels = []
+        for s in sectors[:3]:
+            top_labels.append(f"{s['sector']}({s['share_pct']:.0f}%)")
+        print(f"  行业Top: {' | '.join(top_labels)}")
 
     # ── v2.7 一致性检查 ──
     csv_check = check_csv_integrity()
