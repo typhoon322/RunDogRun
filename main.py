@@ -15,7 +15,18 @@ logger = logging.getLogger("v2")
 def run(top_n: int = 5):
     from v2_final.core.pipeline_logger import PipelineLogger
     plog = PipelineLogger()
-    logger.info(f"v2.5 启动 — Top {top_n}")
+    logger.info(f"v2.5.4 启动 — Top {top_n}")
+
+    # ── v2.5.4: 动态 Universe + 数据同步 ──
+    from data.build_rotating_universe import build_universe
+    from data.sync_data import sync_universe
+
+    universe = build_universe(top_n=300, top_sectors=3)
+    plog.ok("universe", f"{len(universe)} stocks")
+
+    if universe:
+        sync_universe(universe, max_new=30)
+        plog.ok("sync_data", "done")
 
     # ── v2.4 市场状态过滤 ──
     from v2_final.strategy.market_state import get_market_state
