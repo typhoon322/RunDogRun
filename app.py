@@ -129,8 +129,8 @@ with st.expander("📖 使用说明书"):
     if _os.path.exists("docs/user_manual.md"):
         with open("docs/user_manual.md", "r", encoding="utf-8") as _f:
             st.markdown(_f.read())
-else:
-    st.info("说明书文件加载中...")
+    else:
+        st.info("说明书文件加载中...")
 
 # ── 更新信息 ──
 st.divider()
