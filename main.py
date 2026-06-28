@@ -17,11 +17,11 @@ def run(top_n: int = 5):
     plog = PipelineLogger()
     logger.info(f"v2.5.4 启动 — Top {top_n}")
 
-    # ── v2.5.4: 动态 Universe + 数据同步 ──
-    from data.build_rotating_universe import build_universe
+    # ── v2.5.5: 稳定 Universe + 数据同步 ──
+    from data.build_stable_universe import build_stable
     from data.sync_data import sync_universe
 
-    universe = build_universe(top_n=300, top_sectors=3)
+    universe = build_stable(top_n=300)
     plog.ok("universe", f"{len(universe)} stocks")
 
     if universe:
