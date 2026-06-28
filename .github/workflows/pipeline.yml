@@ -2,8 +2,8 @@ name: Pipeline v2.5 Final — 闭环流水线
 
 on:
   schedule:
-    # 每天 UTC 14:00 (北京时间 22:00, 收盘后)
-    - cron: "0 14 * * *"
+    # 工作日 UTC 09:00 (北京时间 17:00, 收盘后2h数据已就绪)
+    - cron: "0 9 * * 1-5"
   workflow_dispatch:
 
 jobs:

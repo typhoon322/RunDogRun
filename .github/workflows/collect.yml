@@ -2,7 +2,7 @@ name: v2.2 Daily Backtest & Report
 
 on:
   schedule:
-    - cron: "0 12 * * 1-5"
+    - cron: "0 9 * * 1-5"
   workflow_dispatch:
 
 jobs:
