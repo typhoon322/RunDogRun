@@ -1,0 +1,48 @@
+{
+  "date": "2026-06-28",
+  "timestamp": "2026-06-28T15:57:06.218344",
+  "version": "2.2.0",
+  "symbol": "PORTFOLIO-3",
+  "live_signal": {
+    "portfolio": [
+      {
+        "code": "601016",
+        "name": "节能风电",
+        "price": 3.94,
+        "score": 10.24,
+        "weight": 0.356
+      },
+      {
+        "code": "688432",
+        "name": "有研硅",
+        "price": 30.9,
+        "score": 9.05,
+        "weight": 0.331
+      },
+      {
+        "code": "002141",
+        "name": "贤丰控股",
+        "price": 5.76,
+        "score": 8.55,
+        "weight": 0.313
+      }
+    ],
+    "metrics": {
+      "total_return": 118.2,
+      "max_drawdown": 33.06,
+      "sharpe": 1.19,
+      "win_rate": 0.52,
+      "volatility": 2.03
+    }
+  },
+  "backtest": {
+    "total_return_pct": 0,
+    "annual_return_pct": 0,
+    "max_drawdown_pct": 0,
+    "win_rate": 0.52,
+    "avg_win_pct": 0,
+    "avg_loss_pct": 0,
+    "total_trades": 0
+  },
+  "strategy_health": "RISKY 🔴"
+}
