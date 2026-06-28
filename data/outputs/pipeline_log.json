@@ -1,76 +1,82 @@
 {
   "pipeline": "v2.5-final",
-  "started": "2026-06-28T23:03:43.847765",
-  "elapsed_sec": 156.7,
-  "total": 11,
-  "ok_count": 11,
+  "started": "2026-06-28T23:09:48.467943",
+  "elapsed_sec": 151.4,
+  "total": 12,
+  "ok_count": 12,
   "fail_count": 0,
   "steps": [
     {
       "step": "01_registry",
       "status": "ok",
-      "detail": "413 CSV",
-      "time": "23:03:44"
+      "detail": "414 CSV",
+      "time": "23:09:48"
     },
     {
       "step": "02_universe",
       "status": "ok",
       "detail": "156 stocks",
-      "time": "23:04:50"
+      "time": "23:10:54"
     },
     {
       "step": "03_sync",
       "status": "ok",
       "detail": "synced for 156 codes",
-      "time": "23:04:50"
+      "time": "23:10:54"
     },
     {
       "step": "04_market",
       "status": "ok",
       "detail": "OK_TRADE",
-      "time": "23:04:50"
+      "time": "23:10:54"
     },
     {
       "step": "05_fetch",
       "status": "ok",
       "detail": "5867 stocks",
-      "time": "23:06:20"
+      "time": "23:12:19"
     },
     {
       "step": "06_sector",
       "status": "ok",
       "detail": "5 strong sectors",
-      "time": "23:06:20"
+      "time": "23:12:19"
     },
     {
       "step": "07_filter",
       "status": "ok",
       "detail": "552 candidates",
-      "time": "23:06:20"
+      "time": "23:12:19"
     },
     {
       "step": "08_allocate",
       "status": "ok",
       "detail": "5 stocks",
-      "time": "23:06:20"
+      "time": "23:12:19"
     },
     {
       "step": "09_backtest",
       "status": "ok",
       "detail": "return=-1.6%",
-      "time": "23:06:20"
+      "time": "23:12:19"
     },
     {
       "step": "10_monitor",
       "status": "ok",
       "detail": "score=60 status=CAUTION",
-      "time": "23:06:20"
+      "time": "23:12:19"
     },
     {
       "step": "11_report",
       "status": "ok",
       "detail": "status=CAUTION score=60",
-      "time": "23:06:20"
+      "time": "23:12:19"
+    },
+    {
+      "step": "12_v26_report",
+      "status": "ok",
+      "detail": "md + wechat",
+      "time": "23:12:19"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "date": "2026-06-28",
-  "timestamp": "2026-06-28T23:06:20.529878",
+  "timestamp": "2026-06-28T23:12:19.911672",
   "version": "2.2.0",
   "symbol": "PORTFOLIO-5",
   "live_signal": {
@@ -70,6 +70,6 @@
   "consistency": {
     "csv_ok": 413,
     "csv_total": 414,
-    "registry_total": 413
+    "registry_total": 414
   }
 }

@@ -117,6 +117,26 @@ if daily_report:
             df["weight"] = df["weight"].apply(lambda x: f"{x:.1%}")
         st.dataframe(df, use_container_width=True, hide_index=True)
 
+    # ═══════════════════════════════════════════
+    # v2.6 日报 (Markdown 完整版)
+    # ═══════════════════════════════════════════
+    md_path = "output/daily_report.md"
+    if not os.path.exists(md_path):
+        md_path = "data/outputs/daily_report.md"
+    if os.path.exists(md_path):
+        with st.expander("📝 v2.6 每日策略报告 (完整版)"):
+            with open(md_path, encoding="utf-8") as f:
+                st.markdown(f.read())
+    
+    # v2.6 微信版
+    wx_path = "output/daily_report_wechat.txt"
+    if not os.path.exists(wx_path):
+        wx_path = "data/outputs/daily_report_wechat.txt"
+    if os.path.exists(wx_path):
+        with st.expander("💬 微信快速版 (可复制)"):
+            with open(wx_path, encoding="utf-8") as f:
+                st.code(f.read(), language=None)
+
 else:
     st.info("📡 日報尚未生成。Pipeline 将在 GitHub Actions 每日自动执行。\n\n"
             "本地运行: `python pipeline/run_pipeline.py --top 5`")
@@ -139,5 +159,5 @@ with st.expander("📖 使用说明书"):
             st.markdown(f.read())
 
 st.divider()
-st.caption("v2.5 Final · Pipeline 闭环 · "
+st.caption("v2.6 · Pipeline 闭环 + 自动日报 · "
            "[GitHub](https://github.com/typhoon322/RunDogRun)")

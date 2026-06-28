@@ -234,6 +234,14 @@ def run_pipeline(top_n: int = 5):
     step("11_report", "ok", f"status={result['status']} score={result['health_score']}")
 
     # ═══════════════════════════════════════════════
+    # ⑫ v2.6 日报 (Markdown + 微信版)
+    # ═══════════════════════════════════════════════
+    from report.generate_report import generate_report as gen_v26_report
+    gen_v26_report()
+    step("12_v26_report", "ok", "md + wechat")
+    print("  📝 v2.6 日报: daily_report.md + daily_report_wechat.txt")
+
+    # ═══════════════════════════════════════════════
     # 保存 Pipeline 日志
     # ═══════════════════════════════════════════════
     _save_log(steps, t0)
