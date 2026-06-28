@@ -1,0 +1,55 @@
+{
+  "steps": [
+    {
+      "step": "pipeline_init",
+      "status": "ok",
+      "detail": "v2.5 pipeline started",
+      "time": "17:56:52"
+    },
+    {
+      "step": "market_state",
+      "status": "ok",
+      "detail": "OK_TRADE",
+      "time": "17:56:53"
+    },
+    {
+      "step": "fetch_data",
+      "status": "ok",
+      "detail": "5867 stocks",
+      "time": "17:58:23"
+    },
+    {
+      "step": "sector_filter",
+      "status": "ok",
+      "detail": "5 strong",
+      "time": "17:58:23"
+    },
+    {
+      "step": "stock_filter",
+      "status": "ok",
+      "detail": "552 candidates",
+      "time": "17:58:23"
+    },
+    {
+      "step": "ranking",
+      "status": "ok",
+      "detail": "12 ranked",
+      "time": "17:58:23"
+    },
+    {
+      "step": "allocation",
+      "status": "ok",
+      "detail": "3 stocks",
+      "time": "17:58:23"
+    },
+    {
+      "step": "report",
+      "status": "ok",
+      "detail": "status=CAUTION score=60",
+      "time": "17:58:23"
+    }
+  ],
+  "total": 8,
+  "ok_count": 8,
+  "fail_count": 0
+}

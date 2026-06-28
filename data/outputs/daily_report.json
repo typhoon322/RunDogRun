@@ -1,6 +1,6 @@
 {
   "date": "2026-06-28",
-  "timestamp": "2026-06-28T16:06:41.268662",
+  "timestamp": "2026-06-28T17:58:23.966949",
   "version": "2.2.0",
   "symbol": "PORTFOLIO-3",
   "live_signal": {
@@ -28,22 +28,13 @@
       }
     ],
     "metrics": {
-      "total_return": 118.2,
-      "max_drawdown": 33.06,
-      "sharpe": 1.19,
+      "total_return": 97.17,
+      "max_drawdown": 36.4,
+      "sharpe": 1.07,
       "win_rate": 0.52,
-      "volatility": 2.03
+      "volatility": 1.97
     },
-    "verdict": {
-      "score": 1,
-      "should_trade": false,
-      "verdict": "SKIP — 策略质量不足",
-      "stats": {
-        "win_rate": 0.52,
-        "max_drawdown": 33.06,
-        "total_return": 118.2
-      }
-    }
+    "status": "CAUTION"
   },
   "backtest": {
     "total_return_pct": 0,
@@ -54,5 +45,12 @@
     "avg_loss_pct": 0,
     "total_trades": 0
   },
-  "strategy_health": "RISKY 🔴"
+  "strategy_health": "RISKY 🔴",
+  "monitor": {
+    "status": "CAUTION",
+    "health_score": 60,
+    "rating": "STABLE ⚡",
+    "trend": "stable →",
+    "note": "建议降仓, 观察回撤"
+  }
 }
