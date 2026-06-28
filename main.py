@@ -72,47 +72,52 @@ def run(top_n: int = 5):
     print(f"\n  回测: {m['total_return']:+.1f}%  dd={m['max_drawdown']:.1f}%  "
           f"sharpe={m['sharpe']}  wr={m['win_rate']:.0%}")
 
-    # ── v2.5 策略健康监控 ──
-    from v2_final.analysis.rolling_stats import RollingStats
-    from v2_final.analysis.health_score import compute_health_score
+    # ── v2.5 统一监控 ──
+    from v2_final.analysis.monitor import analyze, RollingMonitor
     from v2_final.utils.equity_tracker import EquityTracker
 
+    result = analyze(bt["equity_curve"])
+
+    # 滚动监控
+    monitor = RollingMonitor(window=20)
     tracker = EquityTracker()
     tracker.load()
-
-    # 更新净值追踪
     for v in bt["equity_curve"]:
         tracker.update(v)
+        monitor.update(v, result["health_score"])
     tracker.save()
 
-    # 滚动统计
-    rolling = RollingStats(window=20)
-    rolling.update(bt["equity_curve"])
-    rstats = rolling.stats()
-
-    # 健康评分
-    health = compute_health_score({**m, "sharpe": m.get("sharpe", 0)})
-
-    print(f"  健康: {health['health_score']}/100 {health['rating']}")
-    print(f"  滚动20d: wr={rstats['win_rate']:.0%} vol={rstats['volatility']:.1%} sharpe={rstats['sharpe']}")
-    print(f"  净值追踪: {tracker.summary()['n_days']}天 dd={tracker.current_drawdown():.1f}%")
-
-    # ── v2.5 策略门控 ──
-    from v2_final.strategy.strategy_gate import get_verdict
-    verdict = get_verdict(m)
-
-    print(f"  策略评分: {verdict['score']}/3 → {verdict['verdict']}")
-    print()
+    print(f"  监控: {result['rating']} {result['health_score']}/100 → {result['status']}")
+    print(f"  趋势: {monitor.trend()}  dd_now={monitor.current_drawdown():.1f}%")
+    print(f"  评分: wr={result['breakdown']['win_rate_score']} "
+          f"dd={result['breakdown']['drawdown_score']} "
+          f"vol={result['breakdown']['volatility_score']}")
+    print(f"  建议: {result['note']}")
 
     # ── 日报 ──
     from v2_final.report.daily_report import generate_report, save_report, print_summary
     report = generate_report(
         symbol=f"PORTFOLIO-{top_n}",
-        signal={"portfolio": portfolio, "metrics": m, "verdict": verdict},
+        signal={"portfolio": portfolio, "metrics": m, "status": result["status"]},
         backtest_result=bt,
     )
+    report["monitor"] = {
+        "status": result["status"],
+        "health_score": result["health_score"],
+        "rating": result["rating"],
+        "trend": monitor.trend(),
+        "note": result["note"],
+    }
     save_report(report)
     print_summary(report)
+
+    # 最终结论
+    if result["status"] == "STOP":
+        print(f"\n  ⛔ {result['note']}")
+    elif result["status"] == "CAUTION":
+        print(f"\n  ⚡ {result['note']}")
+    else:
+        print(f"\n  ✅ {result['note']}")
 
 
 if __name__ == "__main__":
