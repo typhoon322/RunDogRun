@@ -71,6 +71,7 @@ def generate_report():
     # ── 读取数据 ──
     daily = _read_json("daily_report.json")
     equity = _read_json("equity_curve.json")
+    sys_health = _read_json("system_health.json")
 
     curve = equity.get("curve", []) if equity else []
     bt_metrics = equity.get("metrics", {}) if equity else {}
@@ -101,17 +102,23 @@ def generate_report():
     data_dir = "data/raw/daily"
     csv_count = len(os.listdir(data_dir)) if os.path.exists(data_dir) else 0
 
+    # ── 系统健康评分 ──
+    from report.system_health import system_health_score
+    sys_health = system_health_score()
+
     # ── 生成 Markdown ──
     md = _build_markdown(
         today_str, td_ret, cum_ret, status, health, rating, note, trend,
         portfolio, signal_metrics, backtest, max_dd,
         csv_count, csv_ok, csv_total, registry_total,
+        sys_health,
     )
 
     # ── 生成微信版 ──
     wx = _build_wechat(
         today_str, td_ret, cum_ret, status, health, note,
         portfolio, csv_count, csv_ok, csv_total,
+        sys_health,
     )
 
     # ── 写入文件 ──
@@ -135,13 +142,14 @@ def _build_markdown(
     today_str, td_ret, cum_ret, status, health, rating, note, trend,
     portfolio, signal_metrics, backtest, max_dd,
     csv_count, csv_ok, csv_total, registry_total,
+    sys_health=None,
 ) -> str:
     emoji = _status_emoji(status)
     health_label = _health_label(health)
     data_label = _data_health_label(csv_ok, csv_total)
     wr = backtest.get("win_rate", signal_metrics.get("win_rate", 0))
 
-    md = f"""# 📊 v2.6 每日策略报告
+    md = f"""# 📊 v2.8 每日策略报告
 
 > {today_str} · Pipeline 自动生成
 
@@ -158,7 +166,7 @@ def _build_markdown(
 
 ---
 
-## 🧠 系统状态
+## 🧠 策略状态
 
 | 指标 | 状态 |
 |------|------|
@@ -195,6 +203,23 @@ def _build_markdown(
 
 ---
 
+## 🧠 系统健康评分
+
+"""
+    if sys_health:
+        checks = sys_health.get("checks", {})
+        md += f"| 维度 | 评分 | 状态 |\n"
+        md += f"|------|------|------|\n"
+        labels = {"data": "数据完整", "pipeline": "Pipeline", "backtest": "回测产出", "stability": "收益稳定"}
+        for name, c in checks.items():
+            icon = "✅" if c["ok"] else "❌"
+            md += f"| {labels.get(name, name)} | {c['score']}/25 | {icon} {c['detail']} |\n"
+        md += f"\n| **综合** | **{sys_health['score']}/100** | **{sys_health['level']}** |\n"
+        md += f"\n> 👉 {sys_health['verdict']}\n"
+
+    md += f"""
+---
+
 ## ⚠️ 风险提示
 
 - 本报告由量化策略自动生成，**不构成投资建议**
@@ -203,7 +228,7 @@ def _build_markdown(
 
 ---
 
-*📡 v2.6 Pipeline · [RunDogRun](https://github.com/typhoon322/RunDogRun)*
+*📡 v2.8 · [RunDogRun](https://github.com/typhoon322/RunDogRun)*
 """
     return md
 
@@ -211,6 +236,7 @@ def _build_markdown(
 def _build_wechat(
     today_str, td_ret, cum_ret, status, health, note,
     portfolio, csv_count, csv_ok, csv_total,
+    sys_health=None,
 ) -> str:
     emoji = _status_emoji(status)
     td_symbol = "📈" if td_ret >= 0 else "📉"
@@ -225,10 +251,18 @@ def _build_wechat(
     wx = f"""{emoji} RunDogRun 日报 {today_str}
 
 {td_symbol} 今日: {td_ret:+.2%}  {cum_symbol} 累计: {cum_ret:+.2%}
-🩺 健康: {health}/100 · {status}
+🩺 策略: {health}/100 · {status}
 
 📦 组合: {p_summary if p_summary else '暂无'}
 📋 数据: {csv_ok}/{csv_total} CSV OK
+"""
+    # 系统健康
+    if sys_health:
+        sh_score = sys_health.get("score", 0)
+        sh_level = sys_health.get("level", "")
+        wx += f"\n🧠 系统: {sh_score}/100 {sh_level}"
+
+    wx += f"""
 
 💡 {note}
 

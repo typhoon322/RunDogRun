@@ -239,7 +239,15 @@ def run_pipeline(top_n: int = 5):
     from report.generate_report import generate_report as gen_v26_report
     gen_v26_report()
     step("12_v26_report", "ok", "md + wechat")
-    print("  📝 v2.6 日报: daily_report.md + daily_report_wechat.txt")
+    print("  📝 v2.8 日报: daily_report.md + daily_report_wechat.txt")
+
+    # ═══════════════════════════════════════════════
+    # ⑬ v2.8 系统健康评分
+    # ═══════════════════════════════════════════════
+    from report.system_health import system_health_score, print_health
+    sys_health = system_health_score()
+    print_health(sys_health)
+    step("13_system_health", "ok", f"score={sys_health['score']} {sys_health['level']}")
 
     # ═══════════════════════════════════════════════
     # 保存 Pipeline 日志
@@ -255,7 +263,7 @@ def run_pipeline(top_n: int = 5):
     else:
         print(f"  ✅ {result['note']}")
     print("═" * 50)
-    print("  ✅ PIPELINE COMPLETE")
+    print("  ✅ PIPELINE COMPLETE — v2.8")
     print("═" * 50)
 
 

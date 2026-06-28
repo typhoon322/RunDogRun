@@ -51,6 +51,21 @@ col2.metric("📋 Registry", "✅" if reg_exists else "⚠")
 col3.metric("📊 日報", "✅" if daily_report else "❌")
 col4.metric("⚙ Pipeline", "✅" if pipeline_log else "❌")
 
+# v2.8 系统健康
+sys_health = read_json("system_health.json")
+if sys_health:
+    sh_score = sys_health.get("score", 0)
+    sh_level = sys_health.get("level", "?")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("🧠 系统健康", f"{sh_score}/100", delta=sh_level)
+    checks = sys_health.get("checks", {})
+    labels = {"data": "数据", "pipeline": "执行", "backtest": "回测", "stability": "稳定性"}
+    for name, col in zip(["data","pipeline","backtest","stability"], [c2, c3, c4, c1]):
+        c = checks.get(name, {})
+        icon = "✅" if c.get("ok") else "❌"
+        col.caption(f"{icon} {labels.get(name,name)}: {c.get('detail','')[:25]}")
+    st.caption(f"👉 {sys_health.get('verdict', '')}")
+
 # ═══════════════════════════════════════════════
 # Pipeline 执行详情
 # ═══════════════════════════════════════════════

@@ -1,0 +1,28 @@
+{
+  "score": 100,
+  "level": "🟢 稳定",
+  "verdict": "系统运行正常，可以正常参考结果",
+  "checks": {
+    "data": {
+      "ok": true,
+      "score": 25,
+      "detail": "414 CSV, 充足"
+    },
+    "pipeline": {
+      "ok": true,
+      "score": 25,
+      "detail": "12步全通过"
+    },
+    "backtest": {
+      "ok": true,
+      "score": 25,
+      "detail": "180天曲线, 充足"
+    },
+    "stability": {
+      "ok": true,
+      "score": 25,
+      "detail": "近5日波动 +1.68%, 正常"
+    }
+  },
+  "date": "2026-06-29"
+}
