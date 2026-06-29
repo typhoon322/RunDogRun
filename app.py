@@ -16,11 +16,23 @@ CN_TZ = timezone(timedelta(hours=8))
 def now_cn():
     return datetime.now(CN_TZ)
 
-st.set_page_config(page_title="RunDogRun v2.8", page_icon="📊", layout="wide")
+st.set_page_config(page_title="RunDogRun", page_icon="📊", layout="wide")
+
+# 移动端适配: 标题字号缩小
+st.markdown("""
+<style>
+@media (max-width: 768px) {
+    h1 { font-size: 1.4rem !important; }
+    h2 { font-size: 1.1rem !important; }
+    h3 { font-size: 1.0rem !important; }
+    .stCaption { font-size: 0.75rem !important; }
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ═══════════════════════ 辅助 ═══════════════════════
 def _read(filename: str):
-    for d in ["output", "data/outputs"]:
+    for d in ["output", "data/outputs", "data"]:
         p = os.path.join(d, filename)
         if os.path.exists(p):
             return p
