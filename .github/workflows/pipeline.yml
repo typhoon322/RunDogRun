@@ -34,6 +34,7 @@ jobs:
         run: |
           git config user.name "pipeline-bot"
           git config user.email "pipeline@bot.local"
+          git remote set-url origin git@github.com:typhoon322/RunDogRun.git
           git add output/ data/outputs/ data/raw/daily/ data/collection_days.json || true
           git commit -m "📊 Pipeline $(date +%Y-%m-%d)" || echo "no changes"
           git push || echo "push failed (check DEPLOY_KEY)"
