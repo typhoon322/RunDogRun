@@ -66,7 +66,9 @@ def _data_health_label(csv_ok: int, csv_total: int) -> str:
 
 def generate_report():
     """生成 v2.6 日报 (Markdown + 微信版)"""
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d %H:%M")
+    today_date = now.strftime("%Y-%m-%d")
 
     # ── 读取数据 ──
     daily = _read_json("daily_report.json")
@@ -116,7 +118,7 @@ def generate_report():
 
     # ── 生成微信版 ──
     wx = _build_wechat(
-        today_str, td_ret, cum_ret, status, health, note,
+        today_date, td_ret, cum_ret, status, health, note,
         portfolio, csv_count, csv_ok, csv_total,
         sys_health,
     )
@@ -234,7 +236,7 @@ def _build_markdown(
 
 
 def _build_wechat(
-    today_str, td_ret, cum_ret, status, health, note,
+    today_date, td_ret, cum_ret, status, health, note,
     portfolio, csv_count, csv_ok, csv_total,
     sys_health=None,
 ) -> str:
@@ -248,7 +250,7 @@ def _build_wechat(
         top3 = portfolio[:3]
         p_summary = "、".join(f"{p['name']}({p['weight']:.0%})" for p in top3)
 
-    wx = f"""{emoji} RunDogRun 日报 {today_str}
+    wx = f"""{emoji} RunDogRun 日报 {today_date}
 
 {td_symbol} 今日: {td_ret:+.2%}  {cum_symbol} 累计: {cum_ret:+.2%}
 🩺 策略: {health}/100 · {status}
@@ -266,7 +268,7 @@ def _build_wechat(
 
 💡 {note}
 
-⚠️ 策略自动生成 · 仅供参考
+⚠️ 策略自动生成 · 仅供参考 · {datetime.now().strftime('%H:%M')}
 """
     return wx
 

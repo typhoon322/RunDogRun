@@ -29,19 +29,33 @@ def _read_json(filename: str) -> dict | None:
     return None
 
 # ═══════════════════════ 标题 ═══════════════════════
-today_str = datetime.now().strftime("%Y-%m-%d")
+now = datetime.now()
 st.title("📊 RunDogRun 每日策略系统")
-st.caption(f"{today_str} · GitHub Actions 自动更新")
+
+# 从 pipeline_log 取最后一次执行时间
+pipeline_log_raw = _read_json("pipeline_log.json")
+if pipeline_log_raw:
+    last_run = pipeline_log_raw.get("started", "")
+    try:
+        ts = datetime.fromisoformat(last_run)
+        st.caption(f"数据更新: {ts.strftime('%Y-%m-%d %H:%M')} · 页面刷新: {now.strftime('%H:%M')}")
+    except Exception:
+        st.caption(f"页面刷新: {now.strftime('%Y-%m-%d %H:%M')}")
+else:
+    st.caption(f"页面刷新: {now.strftime('%Y-%m-%d %H:%M')}")
+
+today_str = now.strftime("%Y-%m-%d")
 
 # ═══════════════════════ ① 系统健康 (顶栏) ═══════════════════════
 sys_health = _read_json("system_health.json")
 if sys_health:
     sh_score = sys_health.get("score", 0)
     sh_level = sys_health.get("level", "?")
+    sh_date = sys_health.get("date", "")
     checks = sys_health.get("checks", {})
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("🧠 系统健康", f"{sh_score}/100", delta=sh_level)
+    c1.metric("🧠 系统健康", f"{sh_score}/100", delta=f"{sh_level} {sh_date}")
     labels = {"data": "数据完整", "pipeline": "Pipeline", "backtest": "回测", "stability": "收益稳定"}
     for name, col in zip(["data", "pipeline", "backtest", "stability"], [c2, c3, c4, c1]):
         c = checks.get(name, {})
