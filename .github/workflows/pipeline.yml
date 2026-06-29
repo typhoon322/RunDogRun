@@ -6,6 +6,10 @@ on:
     - cron: "0 9 * * 1-5"
   workflow_dispatch:
 
+# 必须: 允许 GITHUB_TOKEN push
+permissions:
+  contents: write
+
 jobs:
   pipeline:
     runs-on: ubuntu-latest
@@ -15,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -34,7 +38,6 @@ jobs:
         run: |
           git config user.name "pipeline-bot"
           git config user.email "pipeline@bot.local"
-          git remote set-url origin git@github.com:typhoon322/RunDogRun.git
           git add output/ data/outputs/ data/raw/daily/ data/collection_days.json || true
           git commit -m "📊 Pipeline $(date +%Y-%m-%d)" || echo "no changes"
-          git push || echo "push failed (check DEPLOY_KEY)"
+          git push
