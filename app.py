@@ -51,6 +51,23 @@ else:
 
 today_str = now.strftime("%Y-%m-%d")
 
+# ═══════════════════════ 数据资产栏 ═══════════════════════
+collection_days = _read_json("collection_days.json")
+csv_dir = "data/raw/daily"
+csv_count = len(os.listdir(csv_dir)) if os.path.exists(csv_dir) else 0
+
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("📦 数据仓库", f"{csv_count} 只", delta="股票覆盖")
+if collection_days:
+    c2.metric("📅 交易日", f"{collection_days['total_trading_days']} 天",
+             delta=f"{collection_days['date_range']}" if collection_days.get('date_range') else None)
+    c3.metric("📊 平均天数", f"{collection_days.get('per_stock_stats', {}).get('avg_days', 0)} 天/只")
+    c4.metric("📋 Registry", "✅ 在线" if os.path.exists("data/registry.json") else "⚠ 待同步")
+else:
+    c2.metric("📅 交易日", "--", delta="等待首次采集")
+    c3.metric("📊 平均天数", "--")
+    c4.metric("📋 Registry", "⚠")
+
 # ═══════════════════════ ① 系统健康 (顶栏) ═══════════════════════
 sys_health = _read_json("system_health.json")
 if sys_health:

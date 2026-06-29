@@ -255,6 +255,14 @@ def run_pipeline(top_n: int = 5):
     step("13_system_health", "ok", f"score={sys_health['score']} {sys_health['level']}")
 
     # ═══════════════════════════════════════════════
+    # ⑭ 交易日统计
+    # ═══════════════════════════════════════════════
+    from core.data_days import save_collection_days
+    days_info = save_collection_days()
+    step("14_collection_days", "ok", f"{days_info['total_trading_days']} trading days")
+    print(f"  📅 交易日: {days_info['total_trading_days']}天 ({days_info['date_range']})")
+
+    # ═══════════════════════════════════════════════
     # 保存 Pipeline 日志
     # ═══════════════════════════════════════════════
     _save_log(steps, t0)
