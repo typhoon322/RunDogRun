@@ -10,9 +10,11 @@ Returns:
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger("system.health")
+
+CN_TZ = timezone(timedelta(hours=8))
 
 OUTPUT_DIR = "output"
 
@@ -39,7 +41,7 @@ def system_health_score() -> dict:
     score = 100
     checks = {}
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(CN_TZ).strftime("%Y-%m-%d")
 
     # ═══════════════════════════════════════════
     # 1. 数据完整性 (25分)

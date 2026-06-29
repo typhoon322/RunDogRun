@@ -15,11 +15,16 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 # 确保项目根目录在 sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 北京时间
+CN_TZ = timezone(timedelta(hours=8))
+def now_cn():
+    return datetime.now(CN_TZ)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,14 +51,14 @@ def save_json(data: dict, filename: str):
 
 def run_pipeline(top_n: int = 5):
     """主流水线 — 单次执行完成全部环节"""
-    t0 = datetime.now()
+    t0 = now_cn()
     steps = []
 
     def step(name: str, status: str, detail: str = ""):
         steps.append({
             "step": name, "status": status,
             "detail": detail,
-            "time": datetime.now().strftime("%H:%M:%S"),
+            "time": now_cn().strftime("%H:%M:%S"),
         })
 
     print()
@@ -105,8 +110,8 @@ def run_pipeline(top_n: int = 5):
         print("  ⛔ 市场状态 NO_TRADE — 跳过选股, 仅输出空日报")
         step("05_pipeline", "skip", "market NO_TRADE")
         report = {
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "timestamp": datetime.now().isoformat(),
+            "date": now_cn().strftime("%Y-%m-%d"),
+            "timestamp": now_cn().isoformat(),
             "version": "2.5-final",
             "pipeline_status": "SKIPPED",
             "reason": "market NO_TRADE",
@@ -270,7 +275,7 @@ def run_pipeline(top_n: int = 5):
 def _save_log(steps: list, t0: datetime):
     ok_count = sum(1 for s in steps if s["status"] == "ok")
     fail_count = sum(1 for s in steps if s["status"] == "fail")
-    elapsed = (datetime.now() - t0).total_seconds()
+    elapsed = (now_cn() - t0).total_seconds()
 
     plog = {
         "pipeline": "v2.5-final",

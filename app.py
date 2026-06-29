@@ -6,10 +6,15 @@ Pipeline → output/ → Streamlit 只读
 """
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 import pandas as pd
 import streamlit as st
+
+# 北京时间
+CN_TZ = timezone(timedelta(hours=8))
+def now_cn():
+    return datetime.now(CN_TZ)
 
 st.set_page_config(page_title="RunDogRun v2.8", page_icon="📊", layout="wide")
 
@@ -29,7 +34,7 @@ def _read_json(filename: str) -> dict | None:
     return None
 
 # ═══════════════════════ 标题 ═══════════════════════
-now = datetime.now()
+now = now_cn()
 st.title("📊 RunDogRun 每日策略系统")
 
 # 从 pipeline_log 取最后一次执行时间

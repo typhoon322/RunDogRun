@@ -10,10 +10,12 @@ report/generate_report.py — v2.6 每日策略报告生成器
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+CN_TZ = timezone(timedelta(hours=8))
 
 OUTPUT_DIR = "output"
 
@@ -66,7 +68,7 @@ def _data_health_label(csv_ok: int, csv_total: int) -> str:
 
 def generate_report():
     """生成 v2.6 日报 (Markdown + 微信版)"""
-    now = datetime.now()
+    now = datetime.now(CN_TZ)
     today_str = now.strftime("%Y-%m-%d %H:%M")
     today_date = now.strftime("%Y-%m-%d")
 
@@ -268,7 +270,7 @@ def _build_wechat(
 
 💡 {note}
 
-⚠️ 策略自动生成 · 仅供参考 · {datetime.now().strftime('%H:%M')}
+⚠️ 策略自动生成 · 仅供参考 · {datetime.now(CN_TZ).strftime('%H:%M')}
 """
     return wx
 

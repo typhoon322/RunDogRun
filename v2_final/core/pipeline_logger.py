@@ -5,9 +5,11 @@ v2_final/core/pipeline_logger.py — 管道状态追踪器
 输出: data/outputs/pipeline_log.json
 """
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
+
+CN_TZ = timezone(timedelta(hours=8))
 
 
 class PipelineLogger:
@@ -22,7 +24,7 @@ class PipelineLogger:
             "step": step,
             "status": status,
             "detail": str(detail),
-            "time": datetime.now().strftime("%H:%M:%S"),
+            "time": datetime.now(CN_TZ).strftime("%H:%M:%S"),
         })
 
     def ok(self, step: str, detail: str = "") -> None:

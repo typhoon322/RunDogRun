@@ -1,88 +1,46 @@
 {
   "pipeline": "v2.5-final",
-  "started": "2026-06-29T00:26:35.301600",
-  "elapsed_sec": 160.2,
-  "total": 13,
-  "ok_count": 13,
-  "fail_count": 0,
+  "started": "2026-06-29T18:15:36.848049+08:00",
+  "elapsed_sec": 40.2,
+  "total": 6,
+  "ok_count": 5,
+  "fail_count": 1,
   "steps": [
     {
       "step": "01_registry",
       "status": "ok",
       "detail": "414 CSV",
-      "time": "00:26:35"
+      "time": "18:15:37"
     },
     {
       "step": "02_universe",
       "status": "ok",
-      "detail": "156 stocks",
-      "time": "00:27:40"
+      "detail": "216 stocks",
+      "time": "18:15:53"
     },
     {
       "step": "03_sync",
       "status": "ok",
-      "detail": "synced for 156 codes",
-      "time": "00:27:40"
+      "detail": "synced for 216 codes",
+      "time": "18:16:01"
     },
     {
       "step": "04_market",
       "status": "ok",
       "detail": "OK_TRADE",
-      "time": "00:27:41"
+      "time": "18:16:01"
     },
     {
       "step": "05_fetch",
       "status": "ok",
-      "detail": "5867 stocks",
-      "time": "00:29:14"
+      "detail": "0 stocks",
+      "time": "18:16:17"
     },
     {
-      "step": "06_sector",
-      "status": "ok",
-      "detail": "5 strong sectors",
-      "time": "00:29:14"
-    },
-    {
-      "step": "07_filter",
-      "status": "ok",
-      "detail": "552 candidates",
-      "time": "00:29:14"
-    },
-    {
-      "step": "08_allocate",
-      "status": "ok",
-      "detail": "5 stocks",
-      "time": "00:29:14"
-    },
-    {
-      "step": "09_backtest",
-      "status": "ok",
-      "detail": "return=-1.6%",
-      "time": "00:29:14"
-    },
-    {
-      "step": "10_monitor",
-      "status": "ok",
-      "detail": "score=60 status=CAUTION",
-      "time": "00:29:15"
-    },
-    {
-      "step": "11_report",
-      "status": "ok",
-      "detail": "status=CAUTION score=60",
-      "time": "00:29:15"
-    },
-    {
-      "step": "12_v26_report",
-      "status": "ok",
-      "detail": "md + wechat",
-      "time": "00:29:15"
-    },
-    {
-      "step": "13_system_health",
-      "status": "ok",
-      "detail": "score=100 🟢 稳定",
-      "time": "00:29:15"
+      "step": "06_pipeline",
+      "status": "fail",
+      "detail": "only 0 stocks",
+      "time": "18:16:17"
     }
   ]
 }

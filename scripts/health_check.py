@@ -6,17 +6,19 @@ scripts/health_check.py — 每日系统健康巡检
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # 确保脚本目录在 path 中
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+CN_TZ = timezone(timedelta(hours=8))
 
 
 def check() -> int:
     """返回 0=正常, 1=警告, 2=错误"""
     errors = []
     warnings = []
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(CN_TZ).strftime("%Y-%m-%d")
 
     print(f"🔍 系统巡检 — {today}")
     print("─" * 40)
@@ -81,7 +83,7 @@ def check() -> int:
 
     # 保存通知文件
     os.makedirs("data/outputs", exist_ok=True)
-    msg = {"title": title, "errors": errors, "warnings": warnings, "time": datetime.now().isoformat()}
+    msg = {"title": title, "errors": errors, "warnings": warnings, "time": datetime.now(CN_TZ).isoformat()}
     with open("data/outputs/notification.json", "w", encoding="utf-8") as f:
         json.dump(msg, f, ensure_ascii=False, indent=2)
 

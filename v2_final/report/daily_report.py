@@ -5,9 +5,11 @@ v2_final/report/daily_report.py — 日报生成器
 """
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
+
+CN_TZ = timezone(timedelta(hours=8))
 
 logger = logging.getLogger("v2.report")
 
@@ -23,8 +25,8 @@ def generate_report(
     bt = backtest_result.get("metrics", {})
 
     report = {
-        "date": datetime.now().strftime("%Y-%m-%d"),
-        "timestamp": datetime.now().isoformat(),
+        "date": datetime.now(CN_TZ).strftime("%Y-%m-%d"),
+        "timestamp": datetime.now(CN_TZ).isoformat(),
         "version": "2.2.0",
         "symbol": symbol,
 
