@@ -120,15 +120,11 @@ if _is_warmup:
     min_d = warmup.get("min_days", 0)
     target_d = warmup.get("target_days", 30)
     remaining = warmup.get("remaining_days", 0)
-    progress_pct = min(min_d / target_d, 1.0)
+    progress_pct = min(min_d / max(target_d, 1), 1.0)
 
-    # Phase 标签
-    phase_labels = {
-        1: "❄️ Phase 1: 冷启动 (仅数据收集)",
-        2: "🔥 Phase 2: 预热统计 (评分+信号+IC, 不交易)",
-    }
-    st.warning(f"{phase_labels.get(_phase, '⏳ 预热中')} — min_days={min_d}/{target_d}")
-    st.progress(progress_pct, text=f"预热进度: {min_d}/{target_d} 天 · 还需约 {remaining} 个交易日")
+    # 预热信息
+    st.warning(f"{_emoji} {_label} — min_days={min_d}")
+    st.progress(progress_pct, text=f"数据积累: {min_d} 天 · 目标进入 {warmup.get('next_phase', 'ACTIVE')}: 还需约 {remaining} 个交易日")
 
     # 数据覆盖率指标
     wc1, wc2, wc3, wc4, wc5 = st.columns(5)
@@ -142,8 +138,8 @@ if _is_warmup:
     st.caption(f"📅 数据范围: {data_days.get('date_range', '--')} · "
                f"最后更新: {data_days.get('last_date', '--')}")
 
-    # ═══ Phase 2: 统计看板 ═══
-    if _phase == 2:
+    # ═══ Warm-up 统计看板 ═══
+    if _state == "WARM_UP":
         wstats = daily_report.get("warmup_stats", {})
         if wstats:
             st.divider()
