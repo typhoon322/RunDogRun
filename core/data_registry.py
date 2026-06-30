@@ -81,8 +81,16 @@ class DataRegistry:
         path = f"{DATA_DIR}/{code}.csv"
         if not os.path.exists(path):
             return None
+        # 空文件直接跳过
+        if os.path.getsize(path) < 10:
+            self._bad.append(code)
+            logger.warning(f"Empty CSV: {code}")
+            return None
         try:
             df = pd.read_csv(path)
+            if df.empty:
+                self._bad.append(code)
+                return None
             self.index[code] = df
             return df
         except Exception as e:
