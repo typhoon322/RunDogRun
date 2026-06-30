@@ -9,7 +9,14 @@ import os
 
 import numpy as np
 import pandas as pd
-from scipy import stats
+
+try:
+    from scipy import stats
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
+    logger_warn = logging.getLogger("v3.ic")
+    logger_warn.warning("scipy 未安装, IC 计算将降级为简易版")
 
 logger = logging.getLogger("v3.ic")
 
@@ -31,8 +38,12 @@ def calc_ic(df: pd.DataFrame, horizon: int = 5) -> dict:
     valid = df[[col, "score"]].dropna()
     if len(valid) < 5:
         return {"ic": None, "error": f"仅 {len(valid)} 条有效数据"}
-    ic, pval = stats.pearsonr(valid["score"], valid[col])
-    return {"ic": round(float(ic), 4), "p_value": round(float(pval), 4), "n": len(valid)}
+    if HAS_SCIPY:
+        ic, pval = stats.pearsonr(valid["score"], valid[col])
+    else:
+        ic = float(valid["score"].corr(valid[col]))
+        pval = None
+    return {"ic": round(float(ic), 4), "p_value": round(float(pval), 4) if pval else None, "n": len(valid)}
 
 
 def calc_rank_ic(df: pd.DataFrame, horizon: int = 5) -> dict:
@@ -43,8 +54,13 @@ def calc_rank_ic(df: pd.DataFrame, horizon: int = 5) -> dict:
     valid = df[[col, "score"]].dropna()
     if len(valid) < 5:
         return {"rank_ic": None, "error": f"仅 {len(valid)} 条"}
-    ric, pval = stats.spearmanr(valid["score"], valid[col])
-    return {"rank_ic": round(float(ric), 4), "p_value": round(float(pval), 4), "n": len(valid)}
+    if HAS_SCIPY:
+        ric, pval = stats.spearmanr(valid["score"], valid[col])
+    else:
+        # pandas rank corr 降级
+        ric = float(valid["score"].rank().corr(valid[col].rank()))
+        pval = None
+    return {"rank_ic": round(float(ric), 4), "p_value": round(float(pval), 4) if pval else None, "n": len(valid)}
 
 
 def calc_rolling_ic(df: pd.DataFrame, horizon: int = 5, window: int = 20) -> list[dict]:
@@ -59,7 +75,7 @@ def calc_rolling_ic(df: pd.DataFrame, horizon: int = 5, window: int = 20) -> lis
     for i in range(window, len(df) + 1):
         sub = df.iloc[i - window:i]
         if len(sub) >= 5:
-            ic, _ = stats.pearsonr(sub["score"], sub[col])
+            ic = float(sub["score"].corr(sub[col]))
             results.append({
                 "date": df.iloc[i - 1]["signal_date"].strftime("%Y-%m-%d"),
                 "ic": round(float(ic), 4),
