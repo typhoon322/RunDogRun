@@ -25,13 +25,25 @@ def need_update(code: str) -> bool:
     return len(df) < 150
 
 
-def sync_stock(code: str) -> str:
-    df = fetch_stock(code)
-    df = df.tail(180)
-    os.makedirs(DATA_DIR, exist_ok=True)
-    path = f"{DATA_DIR}/{code}.csv"
-    df.to_csv(path, index=False)
-    return path
+def sync_stock(code: str, retries: int = 2) -> str | None:
+    """拉取单只股票数据, 最多重试2次"""
+    import time
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            df = fetch_stock(code)
+            if df is None or df.empty:
+                raise ValueError("空数据")
+            df = df.tail(180)
+            os.makedirs(DATA_DIR, exist_ok=True)
+            path = f"{DATA_DIR}/{code}.csv"
+            df.to_csv(path, index=False)
+            return path
+        except Exception as e:
+            last_error = e
+            if attempt < retries:
+                time.sleep(2)  # 重试前等2秒
+    raise last_error
 
 
 def sync_universe(codes: list[str], max_new: int = 50) -> dict:
@@ -48,7 +60,8 @@ def sync_universe(codes: list[str], max_new: int = 50) -> dict:
             break
         try:
             path = sync_stock(code)
-            ok += 1
+            if path:
+                ok += 1
         except Exception as e:
             print(f"  ❌ {code}: {e}")
     print(f"数据同步: {ok} 新增, {skip} 已有缓存")
