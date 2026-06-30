@@ -101,7 +101,118 @@ class EastMoneyProvider:
 
 
 # ═══════════════════════════════════════════
-# Provider 2: AKShare (兜底)
+# Provider 3: 新浪财经 HTTP (免费, 无需token)
+# ═══════════════════════════════════════════
+
+class SinaProvider:
+    """新浪财经日K线接口"""
+    name = "sina"
+
+    def fetch_history(self, code: str, start_date: str = "20240101"):
+        try:
+            import requests
+            import pandas as pd
+
+            raw = str(code)
+            for prefix in ["sh", "sz", "bj"]:
+                if raw.startswith(prefix) and len(raw) == len(prefix) + 6:
+                    raw = raw[len(prefix):]
+                    break
+
+            # 新浪代码格式: sh600000, sz000001
+            if raw.startswith(("6", "5", "9")):
+                sina_code = f"sh{raw}"
+            else:
+                sina_code = f"sz{raw}"
+
+            url = f"https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={sina_code}&scale=240&ma=no&datalen=1023"
+            resp = requests.get(url, timeout=15,
+                               headers={"User-Agent": "Mozilla/5.0"})
+            data = resp.json()
+            if not data:
+                return None
+
+            rows = []
+            for d in data:
+                dt = d.get("day", "")
+                if dt < start_date.replace("-", ""):
+                    continue
+                rows.append({
+                    "日期": dt,
+                    "开盘": float(d.get("open", 0) or 0),
+                    "收盘": float(d.get("close", 0) or 0),
+                    "最高": float(d.get("high", 0) or 0),
+                    "最低": float(d.get("low", 0) or 0),
+                    "成交量": float(d.get("volume", 0) or 0),
+                    "成交额": 0.0,
+                    "振幅": 0.0,
+                    "涨跌幅": 0.0,
+                    "涨跌额": 0.0,
+                    "换手率": 0.0,
+                })
+            return pd.DataFrame(rows) if rows else None
+        except Exception:
+            return None
+
+
+# ═══════════════════════════════════════════
+# Provider 4: 腾讯财经 HTTP (免费, 无需token)
+# ═══════════════════════════════════════════
+
+class TencentProvider:
+    """腾讯财经日K线接口"""
+    name = "tencent"
+
+    def fetch_history(self, code: str, start_date: str = "20240101"):
+        try:
+            import requests
+            import pandas as pd
+
+            raw = str(code)
+            for prefix in ["sh", "sz", "bj"]:
+                if raw.startswith(prefix) and len(raw) == len(prefix) + 6:
+                    raw = raw[len(prefix):]
+                    break
+
+            if raw.startswith(("6", "5", "9")):
+                tx_code = f"sh{raw}"
+            else:
+                tx_code = f"sz{raw}"
+
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={tx_code},day,,,1023,qfq"
+            resp = requests.get(url, timeout=15,
+                               headers={"User-Agent": "Mozilla/5.0"})
+            data = resp.json()
+            klines = data.get("data", {}).get(tx_code, {}).get("qfqday") or \
+                     data.get("data", {}).get(tx_code, {}).get("day")
+            if not klines:
+                return None
+
+            rows = []
+            for d in klines:
+                dt = d[0]
+                if dt < start_date.replace("-", ""):
+                    continue
+                rows.append({
+                    "日期": dt,
+                    "开盘": float(d[1]),
+                    "收盘": float(d[2]),
+                    "最高": float(d[3]),
+                    "最低": float(d[4]),
+                    "成交量": float(d[5]),
+                    "成交额": 0.0,
+                    "振幅": 0.0,
+                    "涨跌幅": 0.0,
+                    "涨跌额": 0.0,
+                    "换手率": 0.0,
+                })
+            return pd.DataFrame(rows) if rows else None
+        except Exception:
+            return None
+
+
+# ═══════════════════════════════════════════
+# Provider 5: AKShare (兜底)
 # ═══════════════════════════════════════════
 
 class AKShareProvider:
@@ -213,8 +324,10 @@ class ProviderFactory:
         self.providers: list[DataProvider] = []
         # 按优先级注册 (先注册=主源)
         self.register(EastMoneyProvider())   # 主源: 直连东方财富HTTP
-        self.register(AKShareProvider())      # 备源: AKShare库
-        self.register(BaostockProvider())     # 备源: Baostock
+        self.register(SinaProvider())         # 备源2: 新浪财经
+        self.register(TencentProvider())      # 备源3: 腾讯财经
+        self.register(AKShareProvider())      # 备源4: AKShare库
+        self.register(BaostockProvider())     # 备源5: Baostock
 
     def register(self, provider: DataProvider):
         """注册数据源 (后注册的优先级低)"""
