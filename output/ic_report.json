@@ -1,0 +1,20 @@
+{
+  "n_signals": 6,
+  "ic_5d": {
+    "ic": 0.216,
+    "p_value": 0.681,
+    "n": 6
+  },
+  "rank_ic_5d": {
+    "rank_ic": 0.5429,
+    "p_value": 0.2657,
+    "n": 6
+  },
+  "ic_decay": {
+    "ret_1d": 0.4805,
+    "ret_5d": 0.216,
+    "ret_10d": null,
+    "ret_20d": null
+  },
+  "rolling_ic": []
+}

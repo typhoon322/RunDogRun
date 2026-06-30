@@ -1,10 +1,15 @@
 """
-v2_final/strategy/ranker.py — v2.3 选股评分排名
+v2_final/strategy/ranker.py — v3.0 选股评分排名
 ===================================================
 Score = 40%动量 + 30%低价偏好 + 20%成交量 + 10%板块加成
+v3: 引入 sector_mapper 修复板块加成形同虚设的 bug
 """
 import logging
+import sys
+import os
 from typing import Any
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 logger = logging.getLogger("v2.ranker")
 
@@ -21,6 +26,13 @@ def rank_stocks(stocks: list[dict], sector_rank: list[dict] | None = None,
     sector_map = {}
     if sector_rank:
         sector_map = {s["name"]: s.get("strength", 0) for s in sector_rank}
+
+    # v3: 用 code→sector 映射表修复板块加成 bug
+    # 旧代码用个股名 name 查表 (永远命中默认值), 现在用股票代码通过 sector_mapper 查行业
+    try:
+        from portfolio.sector_mapper import lookup_sector
+    except ImportError:
+        lookup_sector = lambda code: "未知"
 
     results = []
     for s in stocks:
@@ -43,11 +55,12 @@ def rank_stocks(stocks: list[dict], sector_rank: list[dict] | None = None,
         if volume < 5e5:
             continue
 
-        # v2.3 综合评分
+        # v3.0 综合评分：用 code→sector 查行业，再用行业查板块强度
         momentum_score = momentum * 0.4
         price_score = (1 / (price + 1)) * 30  # 低价偏好
         volume_score = min(2.0, volume / 1e7) * 0.20
-        sector_score = sector_map.get(name, 3) * 0.03
+        stock_sector = lookup_sector(code)
+        sector_score = sector_map.get(stock_sector, 3) * 0.03
 
         score = round(momentum_score + price_score + volume_score + sector_score, 2)
 

@@ -212,6 +212,74 @@ if csv_count > 0:
         st.write("  ".join(f.replace(".csv", "") for f in samples))
         st.caption(f"完整 {csv_count} 只 → data/raw/daily/")
 
+# ═══════════════════════ V3 分析板块 ═══════════════════════
+st.divider()
+st.subheader("📊 V3 策略质量分析")
+
+# IC 报告
+ic_data = _read_json("ic_report.json")
+if ic_data:
+    with st.expander("📈 IC 分析 (Score 预测力)"):
+        ic5 = ic_data.get("ic_5d", {})
+        ric5 = ic_data.get("rank_ic_5d", {})
+        decay = ic_data.get("ic_decay", {})
+        rolling = ic_data.get("rolling_ic", [])
+
+        c1, c2, c3 = st.columns(3)
+        ic_v = ic5.get("ic")
+        c1.metric("IC (5日)", f"{ic_v:+.4f}" if ic_v else "--",
+                 delta="正向预测" if (ic_v and ic_v > 0) else "无效")
+        ric_v = ric5.get("rank_ic")
+        c2.metric("Rank IC", f"{ric_v:+.4f}" if ric_v else "--")
+        c3.metric("信号总数", ic_data.get("n_signals", 0))
+
+        if decay:
+            st.caption(f"IC 衰减: " + " | ".join(f"{k}={v:+.4f}" if v else f"{k}=N/A" for k, v in decay.items()))
+        if rolling:
+            st.line_chart({r["date"]: r["ic"] for r in rolling}, use_container_width=True)
+
+# 分桶报告
+bucket_data = _read_json("bucket_report.json")
+if bucket_data:
+    buckets = bucket_data.get("buckets", [])
+    if buckets:
+        with st.expander("🔍 评分分桶收益 (Score越高收益越高?)"):
+            import pandas as pd
+            bdf = pd.DataFrame([b for b in buckets if b.get("count", 0) > 0])
+            if not bdf.empty:
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.bar_chart(bdf.set_index("bucket")["avg_return"], use_container_width=True)
+                with c2:
+                    st.dataframe(bdf[["bucket", "count", "avg_return", "win_rate", "sharpe"]],
+                                use_container_width=True, hide_index=True)
+
+# 模拟交易
+sim_data = _read_json("sim_pnl.json")
+if sim_data:
+    m = sim_data.get("metrics", {})
+    if m:
+        with st.expander("📉 模拟交易 (score≥60买入,持有5天)"):
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("总收益", f"{m.get('total_return', 0):+.2%}")
+            c2.metric("胜率", f"{m.get('win_rate', 0):.0%}")
+            c3.metric("夏普", m.get("sharpe", 0))
+            c4.metric("交易次数", m.get("n_trades", 0))
+            curve = sim_data.get("pnl_curve", [])
+            if curve:
+                st.line_chart(curve, use_container_width=True)
+
+# 权重面板
+weights_path = "data/weights.json"
+if os.path.exists(weights_path):
+    with st.expander("🔧 因子权重配置"):
+        import json as _json
+        with open(weights_path) as f:
+            w = _json.load(f)
+        for k, v in w.items():
+            labels = {"momentum": "动量(涨跌幅)", "price_value": "低价偏好", "volume": "成交量", "sector": "板块加成"}
+            st.caption(f"{labels.get(k, k)}: **{v:.1%}**")
+
 # 使用说明书
 with st.expander("📖 使用说明书"):
     if os.path.exists("docs/user_manual.md"):

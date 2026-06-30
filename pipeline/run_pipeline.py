@@ -179,6 +179,13 @@ def run_pipeline(top_n: int = 5):
     print("  └──────────────────────────────────")
 
     # ═══════════════════════════════════════════════
+    # ⑧b v3.0 信号记录
+    # ═══════════════════════════════════════════════
+    from core.signal_logger import log_signals
+    log_signals(portfolio, market_state)
+    step("08b_signal_log", "ok", f"{len(portfolio)} signals")
+
+    # ═══════════════════════════════════════════════
     # ⑨ 回测 (强制走 DataRegistry)
     # ═══════════════════════════════════════════════
     from v2_final.backtest.fast_backtest import backtest_from_cache
@@ -261,6 +268,29 @@ def run_pipeline(top_n: int = 5):
     days_info = save_collection_days()
     step("14_collection_days", "ok", f"{days_info['total_trading_days']} trading days")
     print(f"  📅 交易日: {days_info['total_trading_days']}天 ({days_info['date_range']})")
+
+    # ═══════════════════════════════════════════════
+    # ⑮ v3.0 前瞻收益回填
+    # ═══════════════════════════════════════════════
+    from analytics.forward_returns import compute as compute_fwd
+    compute_fwd()
+    step("15_fwd_returns", "ok", "forward returns computed")
+
+    # ═══════════════════════════════════════════════
+    # ⑯ v3.0 IC + 分桶 + 权重优化
+    # ═══════════════════════════════════════════════
+    from analytics.ic import ic_report
+    ic_rpt = ic_report()
+    step("16_ic", "ok", f"IC(5d)={ic_rpt.get('ic_5d',{}).get('ic',0)}")
+
+    from analytics.bucket import bucket_report
+    bucket_report()
+    step("17_bucket", "ok", "bucket analysis done")
+
+    # 简易因子 IC (从 rawer 实际使用的因子)
+    # momentum≈change_pct, volume≈成交额, price_value≈1/price, sector≈板块强度
+    # IC 简化: 当前先用 score 的总 IC 决定是否调权, 因子级 IC 需更多数据积累
+    step("18_optimizer", "skip", "need more signal data for factor-level IC")
 
     # ═══════════════════════════════════════════════
     # 保存 Pipeline 日志
