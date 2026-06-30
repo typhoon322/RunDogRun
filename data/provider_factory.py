@@ -326,8 +326,10 @@ class ProviderFactory:
         self.register(EastMoneyProvider())   # 主源: 直连东方财富HTTP
         self.register(SinaProvider())         # 备源2: 新浪财经
         self.register(TencentProvider())      # 备源3: 腾讯财经
-        self.register(BaostockProvider())     # 备源4: Baostock
-        # AKShare 在 GitHub Actions 环境持续 RemoteDisconnected, 暂时移除
+        # AKShare: 仅在本地环境启用 (GitHub Actions 上持续 RemoteDisconnected)
+        if not os.environ.get("GITHUB_ACTIONS"):
+            self.register(AKShareProvider())
+        self.register(BaostockProvider())     # 备源: Baostock
 
     def register(self, provider: DataProvider):
         """注册数据源 (后注册的优先级低)"""
