@@ -117,6 +117,20 @@ if daily_report:
         if pa and pa.get("action") != "HOLD":
             st.warning(f"⚠️ 仓位建议: {pa.get('reason','')}")
 
+    # v3 FINAL: 仓位 + 锁定
+    pos_data = daily_report.get("position", {}) if daily_report else {}
+    lock_data = daily_report.get("lock", {}) if daily_report else {}
+    if pos_data or lock_data:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("💰 目标仓位", f"{pos_data.get('target_pct',0):.0%}",
+                 delta="压缩" if pos_data.get('compressed') else pos_data.get('reason','')[:15])
+        cooling = pos_data.get("cooling", {})
+        c2.metric("🧊 冷却状态", "🔒冷却中" if cooling.get("in_cooldown") else "✅ 正常",
+                 delta=f"连亏{cooling.get('consecutive_losses',0)}次")
+        c3.metric("🔒 参数锁定", lock_data.get("version", "v3"),
+                 delta="✅可改" if lock_data.get("can_modify") else "🔒锁定")
+        c4.metric("📅 下次可改", lock_data.get("next_allowed", "-"))
+
 st.divider()
 
 # ═══════════════════════ ② Markdown 日报 (核心展示) ═══════════════════════

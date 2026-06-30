@@ -242,6 +242,22 @@ def run_pipeline(top_n: int = 5):
     step("10b_exec_rules", "ok", f"decision={exec_result['decision']}")
 
     # ═══════════════════════════════════════════════
+    # ⑩c v3 FINAL 仓位计算 + 月度锁定
+    # ═══════════════════════════════════════════════
+    from core.execution_rules import calc_position_size, get_cooling_status
+    from core.monthly_lock import status as lock_status
+
+    cooling = get_cooling_status()
+    position = calc_position_size(norm_score, avg_trend, avg_flow,
+                                  cooling.get("consecutive_losses", 0))
+    lock = lock_status()
+
+    print(f"  💰 仓位: {position['target_pct']:.0%} — {position['reason']}")
+    print(f"  🔒 参数锁定: {lock['status_msg']}")
+
+    step("10c_position", "ok", f"target={position['target_pct']:.0%} {position['reason']}")
+
+    # ═══════════════════════════════════════════════
     # ⑪ 日报输出 (闭环终产物)
     # ═══════════════════════════════════════════════
     from v2_final.report.daily_report import generate_report, save_report, print_summary, generate_markdown
@@ -271,6 +287,19 @@ def run_pipeline(top_n: int = 5):
             "flow": round(avg_flow, 1),
             "score": round(norm_score, 1),
         },
+    }
+    # v3 FINAL: 仓位 + 锁定
+    report["position"] = {
+        "target_pct": position["target_pct"],
+        "reason": position["reason"],
+        "compressed": position["compressed"],
+        "cooling": cooling,
+    }
+    report["lock"] = {
+        "version": lock["version"],
+        "can_modify": lock["can_modify"],
+        "status_msg": lock["status_msg"],
+        "next_allowed": lock["next_allowed"],
     }
     report["consistency"] = {
         "csv_ok": csv_check["ok"],

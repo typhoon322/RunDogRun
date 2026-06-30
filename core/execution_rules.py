@@ -247,6 +247,102 @@ def record_trade_result(profit: float):
     save_state(state)
 
 
+# ═══════════════════════════════════════════
+# ⑥ v3 FINAL: 仓位控制系统
+# ═══════════════════════════════════════════
+
+# Score → 仓位映射
+SCORE_POSITION_MAP = [
+    (80, 1.00),   # 80+ → 满仓
+    (75, 0.60),   # 75-80 → 60%
+    (70, 0.30),   # 70-75 → 30%
+]
+
+MAX_TOTAL_POSITION = 0.70      # 总仓位上限 70%
+MAX_SINGLE_RISK = 0.10         # 单票风险上限 10%
+RISK_COMPRESSED_MAX = 0.30     # 风险压缩下最大仓位
+
+VIOLATION_LOG = "logs/violations.jsonl"
+
+
+def calc_position_size(
+    system_score: float,
+    trend: float,
+    flow: float,
+    consecutive_losses: int = 0,
+) -> dict:
+    """
+    计算推荐仓位。
+
+    Returns:
+        {target_pct: 0.30, reason: "score 73 → 30%", compressed: False}
+    """
+    # Step 1: Score → 基础仓位
+    target = 0.0
+    for threshold, size in SCORE_POSITION_MAP:
+        if system_score >= threshold:
+            target = size
+            break
+
+    if target == 0:
+        return {"target_pct": 0.0, "reason": f"score={system_score:.0f}<70, 不建仓", "compressed": False}
+
+    reason = f"score={system_score:.0f} → {target:.0%}"
+
+    # Step 2: 风险压缩 (trend<60 或 flow<55 → max 30%)
+    compressed = False
+    if trend < 60 or flow < 55:
+        target = min(target, RISK_COMPRESSED_MAX)
+        reason += f", 风险压缩(trend={trend:.0f},flow={flow:.0f})"
+        compressed = True
+
+    # Step 3: 连亏降杠杆
+    if consecutive_losses >= 2:
+        target *= 0.5
+        reason += f", 连亏{consecutive_losses}次×0.5"
+
+    # Step 4: 总仓上限
+    target = min(target, MAX_TOTAL_POSITION)
+
+    return {
+        "target_pct": round(target, 2),
+        "reason": reason,
+        "compressed": compressed,
+        "single_stock_max": round(MAX_SINGLE_RISK, 2),
+    }
+
+
+def log_violation(violation_type: str, reason: str):
+    """违例记录 — 每周必须回看"""
+    import json as _json
+    os.makedirs(os.path.dirname(VIOLATION_LOG), exist_ok=True)
+    entry = {
+        "date": datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M"),
+        "type": violation_type,
+        "reason": reason,
+        "penalty": True,
+    }
+    with open(VIOLATION_LOG, "a", encoding="utf-8") as f:
+        f.write(_json.dumps(entry, ensure_ascii=False) + "\n")
+    logger.warning(f"⚠️ 违例: {violation_type} — {reason}")
+
+
+def get_cooling_status() -> dict:
+    """当前冷却状态"""
+    state = load_state()
+    cooling = state.get("cooling_until")
+    today = datetime.now(CN_TZ).strftime("%Y-%m-%d")
+    if cooling and today <= cooling:
+        return {"in_cooldown": True, "until": cooling, "reason": "连续亏损冷却"}
+    trades = state.get("last_trades", [])
+    losses = sum(1 for t in trades[-3:] if t.get("profit", 0) < 0)
+    return {
+        "in_cooldown": False,
+        "consecutive_losses": losses if len(trades) >= 3 else 0,
+        "recent_trades": len(trades),
+    }
+
+
 def print_decision(result: dict):
     """控制台友好输出"""
     print()
