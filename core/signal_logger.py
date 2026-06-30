@@ -42,6 +42,9 @@ def log_signals(portfolio: list[dict], market_state: str = ""):
                 "entry_close": p.get("price", 0),
                 "score": p.get("score", 0),
                 "weight": p.get("weight", 0),
+                "trend": p.get("trend", 0),
+                "flow": p.get("flow", 0),
+                "value": p.get("value", 0),
                 "market_state": market_state,
                 "recorded_at": now_iso,
             }

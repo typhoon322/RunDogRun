@@ -217,6 +217,31 @@ def run_pipeline(top_n: int = 5):
     step("10_monitor", "ok", f"score={result['health_score']} status={result['status']}")
 
     # ═══════════════════════════════════════════════
+    # ⑩b v3 Lite 执行规则判定
+    # ═══════════════════════════════════════════════
+    from core.execution_rules import decide, print_decision
+
+    # 从组合中取趋势/流动性/估值的中位数作为当前市场环境
+    trends = [p.get("trend", 50) for p in portfolio] if portfolio else [50]
+    flows = [p.get("flow", 50) for p in portfolio] if portfolio else [50]
+    values = [p.get("value", 50) for p in portfolio] if portfolio else [50]
+
+    avg_trend = sum(trends) / len(trends) if trends else 50
+    avg_flow = sum(flows) / len(flows) if flows else 50
+    avg_score = sum(p["score"] for p in portfolio) / len(portfolio) if portfolio else 0
+
+    # 归一化 score 到 0-100 区间
+    norm_score = min(100, max(0, avg_score / 12.0 * 100)) if portfolio else 0
+
+    exec_result = decide(
+        system_score=norm_score,
+        trend=avg_trend,
+        flow=avg_flow,
+    )
+    print_decision(exec_result)
+    step("10b_exec_rules", "ok", f"decision={exec_result['decision']}")
+
+    # ═══════════════════════════════════════════════
     # ⑪ 日报输出 (闭环终产物)
     # ═══════════════════════════════════════════════
     from v2_final.report.daily_report import generate_report, save_report, print_summary, generate_markdown
@@ -232,6 +257,20 @@ def run_pipeline(top_n: int = 5):
         "rating": result.get("rating", ""),
         "trend": "stable →",
         "note": result["note"],
+    }
+    # v3 Lite: 执行决策
+    report["execution"] = {
+        "decision": exec_result["decision"],
+        "emoji": exec_result["emoji"],
+        "can_buy": exec_result["can_buy"],
+        "in_danger": exec_result["in_danger"],
+        "details": exec_result["details"],
+        "position_action": exec_result["position_action"],
+        "factors": {
+            "trend": round(avg_trend, 1),
+            "flow": round(avg_flow, 1),
+            "score": round(norm_score, 1),
+        },
     }
     report["consistency"] = {
         "csv_ok": csv_check["ok"],

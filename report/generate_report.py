@@ -266,6 +266,13 @@ def _build_wechat(
         sh_level = sys_health.get("level", "")
         wx += f"\n🧠 系统: {sh_score}/100 {sh_level}"
 
+    # v3 Lite 执行决策
+    execution = daily.get("execution", {}) if daily else {}
+    if execution:
+        exec_emoji = execution.get("emoji", "")
+        exec_decision = execution.get("decision", "")
+        wx += f"\n🎯 决策: {exec_emoji} {exec_decision}"
+    
     wx += f"""
 
 💡 {note}

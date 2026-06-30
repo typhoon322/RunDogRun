@@ -64,14 +64,30 @@ def rank_stocks(stocks: list[dict], sector_rank: list[dict] | None = None,
 
         score = round(momentum_score + price_score + volume_score + sector_score, 2)
 
+        # v3 Lite: 拆分子因子 (0-100 归一化)
+        # trend = 动量 + 板块强度 (趋势方向)
+        # flow  = 成交量 (资金活跃度)
+        # value = 低价偏好 (估值吸引力)
+        trend_raw = round(momentum_score + sector_score, 2)    # max ≈ 0.4*momentum + 0.03*sector
+        flow_raw = round(volume_score, 2)                      # max ≈ 2.0
+        value_raw = round(price_score, 2)                      # max ≈ 30
+
+        # 归一化到 0-100 (基于经验上界)
+        trend = min(100, max(0, round(trend_raw / 5.0 * 100)))   # 假设 max trend_raw≈5
+        flow = min(100, max(0, round(flow_raw / 2.0 * 100)))     # max flow_raw≈2
+        value = min(100, max(0, round(value_raw / 30.0 * 100)))  # max value_raw≈30
+
         results.append({
             "code": code,
             "name": name,
             "price": round(price, 2),
             "momentum": round(momentum, 2),
-            "volume": int(volume) if volume == volume else 0,  # NaN safe
+            "volume": int(volume) if volume == volume else 0,
             "pe": round(pe, 1),
             "score": score,
+            "trend": trend,
+            "flow": flow,
+            "value": value,
         })
 
     ranked = sorted(results, key=lambda x: x["score"], reverse=True)

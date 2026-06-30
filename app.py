@@ -97,6 +97,26 @@ if sys_health:
         col.caption(f"{icon} {labels.get(name, name)}: {c.get('detail', '?')[:30]}")
     st.caption(f"👉 {sys_health.get('verdict', '')}")
 
+# ═══════════════════════ 执行决策卡片 ═══════════════════════
+daily_report = _read_json("daily_report.json")
+if daily_report:
+    exec_data = daily_report.get("execution", {})
+    if exec_data:
+        st.divider()
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("🎯 今日决策", f"{exec_data.get('emoji','')} {exec_data.get('decision','')}")
+        factors = exec_data.get("factors", {})
+        c2.metric("📈 趋势", f"{factors.get('trend',0):.0f}", delta="≥65可交易")
+        c3.metric("💧 流动性", f"{factors.get('flow',0):.0f}", delta="≥55可交易")
+        c4.metric("🎯 综合评分", f"{factors.get('score',0):.0f}", delta="≥70买入")
+        details = exec_data.get("details", [])
+        if details:
+            for d in details:
+                st.caption(d)
+        pa = exec_data.get("position_action", {})
+        if pa and pa.get("action") != "HOLD":
+            st.warning(f"⚠️ 仓位建议: {pa.get('reason','')}")
+
 st.divider()
 
 # ═══════════════════════ ② Markdown 日报 (核心展示) ═══════════════════════
