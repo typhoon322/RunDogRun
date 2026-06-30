@@ -4,6 +4,7 @@ v2_final/analysis/drift.py — 策略漂移检测
 对比历史 vs 近期表现, 量化策略退化程度
 """
 import logging
+import os
 from typing import Any
 
 logger = logging.getLogger("v2.drift")

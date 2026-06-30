@@ -241,6 +241,7 @@ class BaostockProvider:
         try:
             import baostock as bs
             import pandas as pd
+            import os as _os  # 防御性: 部分 Linux 环境 baostock 内部可能污染命名空间
 
             # 转换代码格式: sh600183 → sh.600183, bj920564 → bj.920564
             # Universe 中代码格式: shXXXXXX / bjXXXXXX / szXXXXXX / 纯数字XXXXXX

@@ -15,15 +15,18 @@ from data.provider_factory import get_factory
 DATA_DIR = "data/raw/daily"
 
 
-def sync_stock(code: str, retries: int = 0) -> str | None:
-    """拉取单只股票数据, 主源失败自动切备源 (factory 内部已做 failover)"""
+def sync_stock(code: str, retries: int = 2) -> str | None:
+    """拉取单只股票数据, 主源失败自动切备源, 最多重试2次"""
+    # 防御性保险: 确保 os 在当前作用域可用
+    # (某些 Linux/CI 环境下依赖库内部可能污染模块命名空间)
+    import os as _os
     factory = get_factory()
     for attempt in range(retries + 1):
         try:
             df = factory.fetch_history(code)
             if df is not None and not df.empty:
                 df = df.tail(180)
-                os.makedirs(DATA_DIR, exist_ok=True)
+                _os.makedirs(DATA_DIR, exist_ok=True)
                 path = f"{DATA_DIR}/{code}.csv"
                 df.to_csv(path, index=False)
                 return path

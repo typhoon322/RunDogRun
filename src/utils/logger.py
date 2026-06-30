@@ -3,7 +3,9 @@ logger.py — 文件 + 控制台双写日志, API调用计数
 """
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+CN_TZ = timezone(timedelta(hours=8))
 
 _logger = None
 _api_call_counts = {"total": 0}
@@ -26,7 +28,7 @@ def get_logger(name: str = "quant") -> logging.Logger:
 
     # 文件
     os.makedirs("logs", exist_ok=True)
-    today = datetime.now().strftime("%Y%m%d")
+    today = datetime.now(CN_TZ).strftime("%Y%m%d")
     fh = logging.FileHandler(f"logs/run_{today}.log", encoding="utf-8")
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
