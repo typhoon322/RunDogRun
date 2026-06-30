@@ -20,9 +20,15 @@ def need_update(code: str) -> bool:
     path = f"{DATA_DIR}/{code}.csv"
     if not os.path.exists(path):
         return True
+    # 空文件 → 需要更新
+    if os.path.getsize(path) < 10:
+        return True
     import pandas as pd
-    df = pd.read_csv(path)
-    return len(df) < 150
+    try:
+        df = pd.read_csv(path)
+        return len(df) < 150
+    except Exception:
+        return True
 
 
 def sync_stock(code: str, retries: int = 2) -> str | None:
