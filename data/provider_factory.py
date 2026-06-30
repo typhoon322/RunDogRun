@@ -9,6 +9,7 @@ data/provider_factory.py — 可插拔数据源工厂
     df = factory.fetch_history("000001")  # 自动主→备切换
 """
 import logging
+import os
 import time
 from typing import Protocol
 
