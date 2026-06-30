@@ -67,6 +67,7 @@ else:
 today_str = now.strftime("%Y-%m-%d")
 
 # ═══════════════════════ 预热模式检测 ═══════════════════════
+daily_report = _read_json("daily_report.json")
 _is_warmup = False
 if daily_report and daily_report.get("pipeline_status") == "DATA_ONLY":
     _is_warmup = True
@@ -149,7 +150,6 @@ if sys_health and not _is_warmup:
     st.caption(f"👉 {sys_health.get('verdict', '')}")
 
 # ═══════════════════════ 执行决策卡片 ═══════════════════════
-daily_report = _read_json("daily_report.json")
 if daily_report and not _is_warmup:
     exec_data = daily_report.get("execution", {})
     if exec_data:
