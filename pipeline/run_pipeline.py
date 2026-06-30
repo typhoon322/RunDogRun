@@ -211,7 +211,7 @@ def run_pipeline(top_n: int = 5):
     result = analyze(equity_curve)
     csv_check = check_csv_integrity()
 
-    print(f"  🩺 监控: {result['rating']} {result['health_score']}/100 → {result['status']}")
+    print(f"  🩺 监控: {result.get('rating','?')} {result['health_score']}/100 → {result['status']}")
     print(f"  📋 一致性: CSV {csv_check['ok']}/{csv_check['total']} OK")
     print(f"  💡 建议: {result['note']}")
     step("10_monitor", "ok", f"score={result['health_score']} status={result['status']}")
@@ -229,7 +229,7 @@ def run_pipeline(top_n: int = 5):
     report["monitor"] = {
         "status": result["status"],
         "health_score": result["health_score"],
-        "rating": result["rating"],
+        "rating": result.get("rating", ""),
         "trend": "stable →",
         "note": result["note"],
     }

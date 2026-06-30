@@ -174,7 +174,8 @@ def analyze(equity_curve: list[float]) -> dict[str, Any]:
     """统一分析入口 — 指标→健康→状态→建议"""
     metrics = calc_metrics(equity_curve)
     if metrics is None:
-        return {"status": "STOP", "health_score": 0, "note": "insufficient data"}
+        return {"status": "STOP", "health_score": 0, "rating": "NO DATA",
+                "breakdown": {}, "note": "insufficient data"}
 
     health = health_score(metrics)
     status = get_status(health["health_score"], metrics["max_drawdown_pct"])
