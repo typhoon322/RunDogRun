@@ -235,13 +235,20 @@ def record_trade_result(profit: float):
     trades.append({"profit": round(profit, 4), "date": datetime.now(CN_TZ).strftime("%Y-%m-%d")})
     trades = trades[-10:]  # 保留最近10笔
 
-    # 检查是否连续3次亏损
-    recent = trades[-3:]
-    if len(recent) == 3 and all(t["profit"] < 0 for t in recent):
-        from datetime import timedelta
-        cooldown = datetime.now(CN_TZ) + timedelta(days=COOLING_DAYS)
+    # v3 FINAL: 冷却规则
+    #   1次亏损 → 冷却3天
+    #   连续3次亏损 → 冷却5天
+    from datetime import timedelta
+
+    if profit < 0:
+        cooldown_days = COOLING_DAYS  # 3天
+        # 检查是否连续3次亏损
+        recent = trades[-3:]
+        if len(recent) == 3 and all(t["profit"] < 0 for t in recent):
+            cooldown_days = 5
+        cooldown = datetime.now(CN_TZ) + timedelta(days=cooldown_days)
         state["cooling_until"] = cooldown.strftime("%Y-%m-%d")
-        logger.warning(f"连续3次亏损, 强制冷却至 {state['cooling_until']}")
+        logger.warning(f"亏损{profit:+.2%}, 强制冷却 {cooldown_days}天 至 {state['cooling_until']}")
 
     state["last_trades"] = trades
     save_state(state)

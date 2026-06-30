@@ -1,8 +1,8 @@
 """
-analytics/bucket.py — v3.0 评分分桶分析器
-=============================================
-Score 5 桶: [0-40,40-60,60-70,70-80,80-100]
-每桶输出: avg_return, win_rate, sharpe, max_dd, count
+analytics/bucket.py — v3 FINAL 评分分桶分析器
+==================================================
+Score 4 桶: [0-50, 50-65, 65-75, 75+]  (对齐 V3 FINAL spec)
+每桶输出: avg_return, win_rate, sample_size
 """
 import json
 import logging
@@ -15,11 +15,10 @@ logger = logging.getLogger("v3.bucket")
 
 SIGNALS_CSV = "data/signals/signals_with_returns.csv"
 BUCKETS = [
-    (0, 40, "🔴 0-40"),
-    (40, 60, "🟠 40-60"),
-    (60, 70, "🟡 60-70"),
-    (70, 80, "🟢 70-80"),
-    (80, 100, "🌟 80-100"),
+    (0, 50, "🔴 0-50"),
+    (50, 65, "🟠 50-65"),
+    (65, 75, "🟡 65-75"),
+    (75, 200, "🟢 75+"),
 ]
 
 

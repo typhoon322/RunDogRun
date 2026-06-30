@@ -1,0 +1,46 @@
+{
+  "version": "v3.0-FINAL",
+  "ratified": "2026-06-30",
+
+  "thresholds": {
+    "trend_min": 65,
+    "flow_min": 55,
+    "system_score_buy": 70,
+    "system_score_strong": 80,
+    "system_score_caution": 60,
+    "system_score_exit": 50,
+    "trend_crash": 50,
+    "flow_dry": 45,
+    "overheat_threshold": 85
+  },
+
+  "position": {
+    "score_70_75": 0.30,
+    "score_75_80": 0.60,
+    "score_80_plus": 1.00,
+    "max_total": 0.70,
+    "single_risk": 0.10,
+    "risk_compress_max": 0.30
+  },
+
+  "cooldown": {
+    "single_loss_days": 3,
+    "three_consecutive_loss_days": 5
+  },
+
+  "lock": {
+    "review_interval_days": 30,
+    "require_data_evidence": true
+  },
+
+  "ban": [
+    "不得新增因子",
+    "不得引入机器学习模型",
+    "不得做预测系统",
+    "不得改为研究平台",
+    "不得做多策略组合",
+    "不得盘中改规则",
+    "不得临时调参",
+    "不得做复杂优化"
+  ]
+}
