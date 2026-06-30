@@ -1,140 +1,143 @@
-# 📖 v2.8 量化系统 — 用户使用说明书 (收官版)
+# 📖 RunDogRun V3 FINAL — 用户使用说明书
 
 ## 快速开始
 
 ```bash
-# 安装依赖
-pip install akshare pandas streamlit
-
-# 运行闭环 Pipeline (推荐)
+pip install akshare pandas scipy streamlit
 python pipeline/run_pipeline.py --top 5
 ```
 
-## 闭环架构
+## 你每天需要做什么
+
+### 1️⃣ 打开 Streamlit
+
+访问 `rundogrun.streamlit.app`，第一眼看到：
 
 ```
-GitHub Actions (每日自动)
-      ↓
-Pipeline (统一入口)
-  ├─ Registry 扫描 (413 CSV)
-  ├─ Universe 生成 (行业轮动+稳定)
-  ├─ 数据补齐 (自动同步缺失)
-  ├─ 市场状态检查 (TRADE/CAUTION/STOP)
-  ├─ 行业过滤 + 选股排名 + 组合配置
-  ├─ 回测执行 (DataRegistry 统一入口)
-  ├─ 监控评分 (0-100 健康度)
-  └─ 日报输出 (JSON + Markdown + 微信版)
-      ↓
-Streamlit 仪表盘 (纯展示, 手机可看)
+🧠 系统健康    🎯 今日决策    💰 目标仓位    🧊 冷却状态    🔒 参数锁定
+100/100       🟢 BUY       30%            ✅ 正常         v3.0-FINAL
 ```
 
-## 核心功能
+### 2️⃣ 看决策
 
-每天自动完成：
+| 看到 | 含义 | 你该做什么 |
+|------|------|-----------|
+| 🟢 BUY / STRONG_BUY | 允许交易 | 按目标仓位买入 |
+| 🟡 OBSERVE | 只看不动 | 不买不卖 |
+| 🔴 CLEAR / NO_TRADE | 禁止交易 | 清仓或空仓 |
 
-1. **扫描全市场** — AkShare 获取 5000+ 只股票实时行情
-2. **筛选强势行业** — 找出涨幅前 5 的行业板块
-3. **精选低价龙头** — 动量强 + 价格<60 + 成交量活跃
-4. **组合分仓** — 自动分配权重，单票≤35%
-5. **历史回测** — DataRegistry 统一入口，真实历史数据
-6. **健康评分** — 三维护康评分 (胜率/回撤/波动)
-7. **自动日报** — Markdown + 微信友好版双输出
+### 3️⃣ 按仓位执行
 
-## 命令一览
+| Score | 仓位 | 10万资金 |
+|-------|------|----------|
+| 70-75 | 30% | 3万 |
+| 75-80 | 60% | 6万 |
+| 80+ | 100% | 10万（实际上限7万） |
 
-| 命令 | 作用 |
-|------|------|
-| `python pipeline/run_pipeline.py` | 完整闭环 (默认 Top 5) |
-| `python pipeline/run_pipeline.py --top 3` | Top 3 |
-| `python pipeline/run_pipeline.py --top 10` | Top 10 |
+### 4️⃣ 不要做
 
-## 输出文件
+- ❌ 盘中临时改主意
+- ❌ 不满足 Hard Gate 强行买入
+- ❌ 连续亏损后追回本
 
-| 文件 | 内容 | 用途 |
-|------|------|------|
-| `output/daily_report.json` | 主报告 (JSON 结构化) | 数据对接 |
-| `output/daily_report.md` | Markdown 完整日报 | Streamlit / GitHub 预览 |
-| `output/daily_report_wechat.txt` | 微信友好版 | 直接复制发微信 |
-| `output/pipeline_log.json` | Pipeline 执行日志 | 排错 |
-| `output/equity_curve.json` | 回测资金曲线 | 图表展示 |
+---
 
-## 📱 微信日报使用方法
+## 系统自动运行
+
+系统每天 17:00 (北京时间) 通过 GitHub Actions 自动执行，不需要你手动触发。执行流程：
+
+```
+① 扫描数据仓库 (415 CSV)
+② 生成 Universe (行业轮动)
+③ 补齐缺失数据
+④ 判断市场状态
+⑤ 拉取全市场行情
+⑥ 行业过滤 + 选股排名
+⑦ 组合配置 (Top 5)
+⑧ 信号记录 → logs/signals.jsonl
+⑨ 回测验证
+⑩ 监控评分 + 一致性检查
+⑪ 执行规则判定 (Hard Gate)
+⑫ 仓位计算
+⑬ 日报输出 (JSON + Markdown + 微信版)
+⑭ 系统健康评分
+⑮ 交易日统计
+⑯ 前瞻收益回填
+⑰ IC 计算 + 分桶分析
+```
+
+---
+
+## 输出文件一览
+
+| 文件 | 内容 | 什么时候看 |
+|------|------|-----------|
+| `output/daily_report.md` | Markdown 完整日报 | 每天 |
+| `output/daily_report_wechat.txt` | 微信版 (复制即用) | 每天 |
+| `output/system_health.json` | 系统健康评分 | 出问题时 |
+| `output/ic_report.json` | IC 分析 | 月度复盘 |
+| `output/bucket_report.json` | 分桶统计 | 月度复盘 |
+| `logs/signals.jsonl` | 信号历史 | 复盘回溯 |
+
+---
+
+## 微信日报使用
 
 1. 打开 `output/daily_report_wechat.txt`
-2. 全选复制
+2. 全选 → 复制
 3. 粘贴到微信任意对话
-4. 即可查看当日策略摘要
 
 示例：
-
 ```
-🟡 RunDogRun 日报 2026-06-28
+🟢 RunDogRun 日报 2026-07-01
 
-📈 今日: +3.24%  📉 累计: -1.61%
-🩺 健康: 60/100 · CAUTION
+📈 今日: +2.15%  📈 累计: +5.32%
+🩺 策略: 75/100 · TRADE
 
 📦 组合: 节能风电(23%)、有研硅(21%)、贤丰控股(19%)
-📋 数据: 413/414 CSV OK
+📋 数据: 420/421 CSV OK
 
-💡 建议降仓, 观察回撤
+🧠 系统: 100/100 🟢 稳定
+🎯 决策: 🟢 BUY
 
-⚠️ 策略自动生成 · 仅供参考
+⚠️ 策略自动生成 · 仅供参考 · 17:05
 ```
 
-## 仪表盘
+---
 
-部署到 Streamlit Cloud (`rundogrun.streamlit.app`)：
+## 月度复盘 (每30天一次)
 
-- 📊 策略状态卡片 (TRADE/CAUTION/STOP)
-- 📈 绩效指标 (胜率/回撤/波动)
-- 📦 当前组合持仓
-- 🔧 Pipeline 每步执行状态
-- 📝 完整日报 (折叠展开)
-- 💬 微信快速版 (复制即用)
+1. 打开 Streamlit → 看 IC 分析 (Score 预测力)
+2. 看分桶收益 (哪个分数段最赚钱)
+3. 看模拟交易 PnL
+4. 如有必要，在月度窗口调整参数 (`data/constitution.json`)
+5. 所有修改记录在 `data/version_lock.json`
 
-## 自动化运行
+---
 
-GitHub Actions 每日自动：
+## 常见问题
 
-```
-UTC 14:00 (北京时间 22:00)
-  → Pipeline 闭环执行
-  → 日报自动生成
-  → 推送到 GitHub
-  → Streamlit 自动刷新
-```
+**Q: 系统显示 NO_TRADE 怎么办？**
+A: 说明当前不满足 Hard Gate (趋势/系统/流动性任一不足)。不要强行交易。
 
-## 健康评分说明
+**Q: 冷却中是什么意思？**
+A: 你最近亏过钱，系统强制让你休息。1次亏损3天，3连亏5天。等冷却结束再看。
 
-| 评分 | 状态 | 含义 |
-|------|------|------|
-| 70-100 | 🟢 TRADE | 策略健康，可正常使用 |
-| 50-69 | 🟡 CAUTION | 建议降仓观察 |
-| 0-49 | 🔴 STOP | 建议暂停使用 |
+**Q: 参数能改吗？**
+A: 每30天可以改一次。打开 `data/constitution.json` 修改阈值，然后跑一次 Pipeline。
 
-评分维度：胜率(40分) + 回撤(30分) + 波动(30分)
+**Q: 数据不准怎么办？**
+A: 系统用 AKShare 免费数据，偶尔断连正常。GitHub Actions 有容错机制，第二天会自动重试。
 
-## 注意事项
+---
 
-- ⚠️ 本系统**不做自动交易**，仅输出分析信号
+## 风险提示
+
+- ⚠️ 本系统不做自动交易，仅输出分析信号
 - ⚠️ 所有结果仅供参考，不构成投资建议
 - ⚠️ 回测收益不代表未来表现
 - ⚠️ 建议先用小资金验证 2-4 周
 
-## 常见问题
-
-**Q: Pipeline 某一步失败了？**
-A: 查看 `output/pipeline_log.json`，每一步有详细状态和时间。
-
-**Q: 提示 "NO_TRADE"？**
-A: 当前市场 MA5 < MA20，系统判定不适合交易，自动跳过。
-
-**Q: 微信版在哪？**
-A: `output/daily_report_wechat.txt`，每天 Pipeline 自动生成。
-
-**Q: 如何回测更长时间？**
-A: 数据仓库已有 413 只数年的 CSV 缓存。运行完整 Pipeline 即自动回测。
-
 ---
 
-*系统版本: v2.8 · Pipeline 闭环 + 自动日报 · 收官版*
+*V3.0-FINAL · 2026-06-30 封版*
