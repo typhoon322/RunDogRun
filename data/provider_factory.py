@@ -58,8 +58,10 @@ class BaostockProvider:
             import baostock as bs
             import pandas as pd
 
-            # 转换代码格式: 000001 → sh.000001 或 sz.000001
-            if code.startswith(("6", "5", "9")):
+            # 转换代码格式: bj → bj.xxxxxx, 6/5/9 → sh, 0/2/3 → sz
+            if code.startswith(("8", "4")):
+                bs_code = f"bj.{code}"
+            elif code.startswith(("6", "5", "9")):
                 bs_code = f"sh.{code}"
             else:
                 bs_code = f"sz.{code}"
@@ -149,10 +151,14 @@ class ProviderFactory:
                             logger.info(f"备源 {provider.name} 成功: {code}")
                         return df
                 except Exception as e:
-                    logger.warning(f"{provider.name}[{code}] 第{attempt+1}次失败: {e}")
+                    pass  # 静默, 下面统一处理
                 if attempt < retries:
                     time.sleep(1)
-            logger.warning(f"{provider.name}[{code}] 全部尝试失败, 切换下一个源")
+            # 只在全部重试失败后才输出一条 warning (不是每条重试都打)
+            if retries > 0:
+                logger.warning(f"{provider.name}[{code}] 重试{retries}次均失败")
+            else:
+                logger.warning(f"{provider.name}[{code}] 失败, 切换备源")
 
         return None
 
