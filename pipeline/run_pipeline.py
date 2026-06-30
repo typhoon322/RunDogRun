@@ -387,6 +387,27 @@ def run_pipeline(top_n: int = 5):
     step("19_standard_report", "ok", f"trades={std_report.get('system_health',{}).get('total_trades',0)}")
 
     # ═══════════════════════════════════════════════
+    # ⑳ V3 FINAL: 飞书决策卡推送
+    # ═══════════════════════════════════════════════
+    try:
+        from core.feishu_sender import send_decision_card
+        ok = send_decision_card(
+            system_score=norm_score,
+            trend=avg_trend,
+            flow=avg_flow,
+            value=avg_value,
+            decision=decision,
+            position=position,
+            market_state=market_state,
+        )
+        step("20_feishu", "ok" if ok else "fail", "pushed" if ok else "send failed")
+        if ok:
+            print("  📡 飞书推送成功")
+    except Exception as e:
+        step("20_feishu", "skip", str(e)[:30])
+        print(f"  📡 飞书推送跳过: {e}")
+
+    # ═══════════════════════════════════════════════
     # 保存 Pipeline 日志
     # ═══════════════════════════════════════════════
     _save_log(steps, t0)

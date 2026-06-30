@@ -1,7 +1,33 @@
 # 🧭 RunDogRun V3 FINAL — 每日执行 SOP
 
 > 每天只做一轮，不允许跳步、不允许重来。
-> 系统在 Streamlit 首页已经展示了你需要的一切。
+> 系统自动推送飞书决策卡，你只需要看消息 + 执行。
+
+---
+
+## 📱 飞书推送（新增）
+
+每天 17:00 后，飞书群自动收到决策卡：
+
+```
+📊 RunDogRun 2026-07-01
+━━━━━━━━━━━━━━━━━━━━━
+System Score: 73
+Trend: 70  |  Flow: 60  |  Value: 55
+市场状态: OK_TRADE
+━━━━━━━━━━━━━━━━━━━━━
+Decision: 🟢 小仓试单
+Position: 30%
+Risk: NORMAL
+Allow Trade: YES
+━━━━━━━━━━━━━━━━━━━━━
+Action: 小买: 70≤score=73<80
+⚠️ 自动生成 · 仅供参考 · 17:05
+```
+
+**看到这条消息 → 打开 Streamlit 确认 → 执行或不执行。**
+
+如果你没开飞书，仍可以用原来的方式：打开 `rundogrun.streamlit.app`。
 
 ---
 
