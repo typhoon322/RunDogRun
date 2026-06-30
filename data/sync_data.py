@@ -2,42 +2,26 @@
 data/sync_data.py — 数据自动补齐系统
 =========================================
 Universe 新增股票 → 自动补 180 天历史 CSV
+v3.1: 使用 ProviderFactory 可插拔多数据源
 """
 import os
 import sys
+import time
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from data.provider_factory import get_factory
 
 DATA_DIR = "data/raw/daily"
 
 
-def fetch_stock(code: str):
-    import akshare as ak
-    return ak.stock_zh_a_hist(symbol=code, period="daily",
-                               start_date="20240101", adjust="qfq")
-
-
-def need_update(code: str) -> bool:
-    path = f"{DATA_DIR}/{code}.csv"
-    if not os.path.exists(path):
-        return True
-    # 空文件 → 需要更新
-    if os.path.getsize(path) < 10:
-        return True
-    import pandas as pd
-    try:
-        df = pd.read_csv(path)
-        return len(df) < 150
-    except Exception:
-        return True
-
-
 def sync_stock(code: str, retries: int = 2) -> str | None:
-    """拉取单只股票数据, 最多重试2次"""
-    import time
+    """拉取单只股票数据, 主源失败自动切备源, 最多重试2次"""
+    factory = get_factory()
     last_error = None
     for attempt in range(retries + 1):
         try:
-            df = fetch_stock(code)
+            df = factory.fetch_history(code)
             if df is None or df.empty:
                 raise ValueError("空数据")
             df = df.tail(180)
@@ -48,7 +32,7 @@ def sync_stock(code: str, retries: int = 2) -> str | None:
         except Exception as e:
             last_error = e
             if attempt < retries:
-                time.sleep(2)  # 重试前等2秒
+                time.sleep(2)
     raise last_error
 
 

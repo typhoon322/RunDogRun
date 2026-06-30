@@ -27,7 +27,7 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: pip install akshare pandas scipy
+        run: pip install akshare pandas scipy baostock
 
       - name: Run Pipeline
         run: python pipeline/run_pipeline.py --top 5
