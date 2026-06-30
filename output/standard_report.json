@@ -1,0 +1,32 @@
+{
+  "score_buckets": {
+    "0-50": {
+      "avg_return": -0.0124,
+      "win_rate": 0.167,
+      "n": 6
+    },
+    "50-65": {
+      "avg_return": null,
+      "win_rate": null,
+      "n": 0
+    },
+    "65-75": {
+      "avg_return": null,
+      "win_rate": null,
+      "n": 0
+    },
+    "75+": {
+      "avg_return": null,
+      "win_rate": null,
+      "n": 0
+    }
+  },
+  "system_health": {
+    "total_trades": 6,
+    "win_rate": 0.167,
+    "avg_return": -0.0124,
+    "max_drawdown": -0.2312,
+    "expectancy": -0.0124
+  },
+  "generated_at": "2026-06-30T14:28:08.990719+08:00"
+}

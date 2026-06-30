@@ -6,6 +6,22 @@
 
 ---
 
+## 封版声明
+
+RunDogRun V3 FINAL is a rule-based trading system.
+
+**Principles:**
+- No prediction
+- No machine learning
+- No dynamic strategy evolution
+- No indicator expansion
+
+**System evolves only via monthly parameter review.**
+
+Every trade must pass through the Decision Engine. Every signal is snapshot-locked. Every report follows the Standard Schema. No exceptions.
+
+---
+
 ## 系统本质
 
 这个系统不是用来让你更聪明的，而是用来保证你不会在市场里做蠢事。

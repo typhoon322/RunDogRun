@@ -232,17 +232,37 @@ def run_pipeline(top_n: int = 5):
 
     # 归一化 score 到 0-100 区间
     norm_score = min(100, max(0, avg_score / 12.0 * 100)) if portfolio else 0
+    avg_value = sum(values) / len(values) if values else 50
 
-    exec_result = decide(
+    # ═══════════════════════════════════════════════
+    # V3 FINAL PATCH: Decision Engine (唯一决策入口)
+    # ═══════════════════════════════════════════════
+    from execution.decision_engine import decide as final_decide
+
+    decision = final_decide(
         system_score=norm_score,
         trend=avg_trend,
         flow=avg_flow,
+        value=avg_value,
     )
-    print_decision(exec_result)
-    step("10b_exec_rules", "ok", f"decision={exec_result['decision']}")
+    print(f"  🎯 Decision Engine: {decision['emoji']} {decision['action']} — {decision['reason']}")
+    step("10b_decision", "ok", f"action={decision['action']}")
 
     # ═══════════════════════════════════════════════
-    # ⑩c v3 FINAL 仓位计算 + 月度锁定
+    # V3 FINAL PATCH: Signal Snapshot (冻结信号)
+    # ═══════════════════════════════════════════════
+    from signals.snapshot import create_snapshot
+    for p in portfolio:
+        create_snapshot(
+            stock_code=p["code"],
+            stock_name=p["name"],
+            decision=decision,
+            entry_price=p["price"],
+        )
+    step("10c_snapshot", "ok", f"{len(portfolio)} snapshots locked")
+
+    # ═══════════════════════════════════════════════
+    # ⑩d 仓位计算 + 月度锁定
     # ═══════════════════════════════════════════════
     from core.execution_rules import calc_position_size, get_cooling_status
     from core.monthly_lock import status as lock_status
@@ -274,14 +294,13 @@ def run_pipeline(top_n: int = 5):
         "trend": "stable →",
         "note": result["note"],
     }
-    # v3 Lite: 执行决策
+    # v3 FINAL: 执行决策
     report["execution"] = {
-        "decision": exec_result["decision"],
-        "emoji": exec_result["emoji"],
-        "can_buy": exec_result["can_buy"],
-        "in_danger": exec_result["in_danger"],
-        "details": exec_result["details"],
-        "position_action": exec_result["position_action"],
+        "decision": decision["action"],
+        "emoji": decision["emoji"],
+        "can_buy": decision["allow_trade"],
+        "in_danger": decision["action"] == "NO_TRADE",
+        "details": [decision["reason"]],
         "factors": {
             "trend": round(avg_trend, 1),
             "flow": round(avg_flow, 1),
@@ -359,6 +378,13 @@ def run_pipeline(top_n: int = 5):
     # momentum≈change_pct, volume≈成交额, price_value≈1/price, sector≈板块强度
     # IC 简化: 当前先用 score 的总 IC 决定是否调权, 因子级 IC 需更多数据积累
     step("18_optimizer", "skip", "need more signal data for factor-level IC")
+
+    # ═══════════════════════════════════════════════
+    # ⑲ V3 FINAL PATCH: Standard Report (统一格式)
+    # ═══════════════════════════════════════════════
+    from report.standard_report import generate as gen_std_report
+    std_report = gen_std_report()
+    step("19_standard_report", "ok", f"trades={std_report.get('system_health',{}).get('total_trades',0)}")
 
     # ═══════════════════════════════════════════════
     # 保存 Pipeline 日志
