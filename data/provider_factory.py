@@ -58,13 +58,22 @@ class BaostockProvider:
             import baostock as bs
             import pandas as pd
 
-            # 转换代码格式: bj → bj.xxxxxx, 6/5/9 → sh, 0/2/3 → sz
-            if code.startswith(("8", "4")):
-                bs_code = f"bj.{code}"
-            elif code.startswith(("6", "5", "9")):
-                bs_code = f"sh.{code}"
+            # 转换代码格式: sh600183 → sh.600183, bj920564 → bj.920564
+            # Universe 中代码格式: shXXXXXX / bjXXXXXX / szXXXXXX / 纯数字XXXXXX
+            raw = str(code)
+            # 去掉可能的前缀
+            for prefix in ["sh", "sz", "bj"]:
+                if raw.startswith(prefix) and len(raw) == len(prefix) + 6:
+                    bs_code = f"{prefix}.{raw[len(prefix):]}"
+                    break
             else:
-                bs_code = f"sz.{code}"
+                # 纯数字, 推断市场
+                if raw.startswith(("8", "4")):
+                    bs_code = f"bj.{raw}"
+                elif raw.startswith(("6", "5", "9")):
+                    bs_code = f"sh.{raw}"
+                else:
+                    bs_code = f"sz.{raw}"
 
             bs.login()
             rs = bs.query_history_k_data_plus(
