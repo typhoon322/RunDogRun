@@ -9,7 +9,9 @@ pipeline/run_pipeline.py — v2.5 Final 统一闭环流水线
   监控评分 → 日报输出 → output/
 
 用法:
-  python pipeline/run_pipeline.py [--top 5]
+  python pipeline/run_pipeline.py [--top 5] [--data-only]
+  --data-only: 仅执行数据收集 (①②③), 跳过策略计算
+               预热期使用, 等 min_days >= 30 后自动切回完整模式
 """
 import json
 import logging
@@ -49,10 +51,27 @@ def save_json(data: dict, filename: str):
         logger.info(f"  ↳ 写入 {path}")
 
 
-def run_pipeline(top_n: int = 5):
-    """主流水线 — 单次执行完成全部环节"""
+def run_pipeline(top_n: int = 5, data_only: bool = False):
+    """主流水线 — 单次执行完成全部环节
+
+    data_only=True: 仅执行 ①②③ 数据收集, 跳过策略计算 (预热期)
+    """
     t0 = now_cn()
     steps = []
+
+    # 预热期自动检测: min_days < 30 时强制 data-only
+    if not data_only:
+        try:
+            from core.data_days import compute_collection_days
+            days_info = compute_collection_days()
+            min_days = days_info.get("per_stock_stats", {}).get("min_days", 0)
+            if min_days < 30:
+                data_only = True
+                logger.info(f"🔄 预热期 (min_days={min_days} < 30) — 仅收集数据")
+        except Exception:
+            pass
+
+    mode_label = "📊 DATA-ONLY (预热期)" if data_only else "🚀 FULL PIPELINE"
 
     def step(name: str, status: str, detail: str = ""):
         steps.append({
@@ -63,7 +82,7 @@ def run_pipeline(top_n: int = 5):
 
     print()
     print("═" * 50)
-    print("  🚀 PIPELINE v2.5 Final — 闭环启动")
+    print(f"  {mode_label} v2.5 Final — 闭环启动")
     print("═" * 50)
     ensure_output_dir()
 
@@ -97,6 +116,48 @@ def run_pipeline(top_n: int = 5):
         step("03_sync", "ok", f"synced for {len(universe)} codes")
     else:
         step("03_sync", "skip", "empty universe")
+
+    # ═══════════════════════════════════════════════
+    # ③b 交易日统计 (data-only 模式必跑)
+    # ═══════════════════════════════════════════════
+    from core.data_days import save_collection_days
+    days_info = save_collection_days()
+    step("03b_data_days", "ok", f"{days_info['total_trading_days']} trading days, min={days_info['per_stock_stats']['min_days']}")
+    print(f"  📅 交易日: {days_info['total_trading_days']}天 | min_days={days_info['per_stock_stats']['min_days']} | avg={days_info['per_stock_stats']['avg_days']}")
+
+    # ═══════════════════════════════════════════════
+    # DATA-ONLY 模式: 到此为止, 跳过策略计算
+    # ═══════════════════════════════════════════════
+    if data_only:
+        min_days = days_info.get("per_stock_stats", {}).get("min_days", 0)
+        remaining = max(0, 30 - min_days)
+        report = {
+            "date": now_cn().strftime("%Y-%m-%d"),
+            "timestamp": now_cn().isoformat(),
+            "version": "2.5-final",
+            "pipeline_status": "DATA_ONLY",
+            "mode": "warmup",
+            "registry_stats": stats,
+            "universe_size": len(universe),
+            "data_days": days_info,
+            "warmup": {
+                "min_days": min_days,
+                "target_days": 30,
+                "remaining_days": remaining,
+                "progress": f"{min_days}/30",
+            },
+        }
+        save_json(report, "daily_report.json")
+        _save_log(steps, t0)
+
+        print()
+        print(f"  📊 数据预热中: min_days={min_days}/30")
+        if remaining > 0:
+            print(f"  ⏳ 还需约 {remaining} 个交易日完成预热")
+        else:
+            print(f"  ✅ 预热完成! 下次运行将自动切换到完整 Pipeline")
+        print("═" * 50)
+        return
 
     # ═══════════════════════════════════════════════
     # ④ 市场状态检查
@@ -445,7 +506,10 @@ def _save_log(steps: list, t0: datetime):
 
 if __name__ == "__main__":
     top = 5
+    data_only = False
     for i, arg in enumerate(sys.argv):
         if arg == "--top" and i + 1 < len(sys.argv):
             top = int(sys.argv[i + 1])
-    run_pipeline(top)
+        if arg == "--data-only":
+            data_only = True
+    run_pipeline(top, data_only=data_only)

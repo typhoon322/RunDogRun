@@ -66,6 +66,54 @@ else:
 
 today_str = now.strftime("%Y-%m-%d")
 
+# ═══════════════════════ 预热模式检测 ═══════════════════════
+_is_warmup = False
+if daily_report and daily_report.get("pipeline_status") == "DATA_ONLY":
+    _is_warmup = True
+
+if _is_warmup:
+    warmup = daily_report.get("warmup", {})
+    data_days = daily_report.get("data_days", {})
+    reg_stats = daily_report.get("registry_stats", {})
+    min_d = warmup.get("min_days", 0)
+    target_d = warmup.get("target_days", 30)
+    remaining = warmup.get("remaining_days", 0)
+    progress_pct = min(min_d / target_d, 1.0)
+
+    st.warning("⏳ **数据预热中** — 前30天仅收集数据，不执行策略计算")
+    st.progress(progress_pct, text=f"预热进度: {min_d}/{target_d} 天 · 还需约 {remaining} 个交易日")
+
+    wc1, wc2, wc3, wc4, wc5 = st.columns(5)
+    wc1.metric("📦 CSV 总量", f"{data_days.get('csv_count', reg_stats.get('total_csv', 0))}")
+    wc2.metric("📅 交易日", f"{data_days.get('total_trading_days', 0)} 天")
+    wc3.metric("📊 平均覆盖", f"{data_days.get('per_stock_stats', {}).get('avg_days', 0):.0f} 天/只")
+    wc4.metric("📉 最少覆盖", f"{data_days.get('per_stock_stats', {}).get('min_days', 0)} 天",
+              delta="⚠ 部分新股数据不足" if min_d < target_d else "✅ 达标")
+    wc5.metric("🌐 Universe", f"{daily_report.get('universe_size', 0)} 只")
+
+    st.caption(f"📅 数据范围: {data_days.get('date_range', '--')} · "
+               f"最后更新: {data_days.get('last_date', '--')}")
+
+    with st.expander("📖 预热说明"):
+        st.markdown("""
+**为什么需要预热？**
+- 部分新纳入 Universe 的股票历史数据不足 30 天
+- 趋势因子 (MA5/MA20)、流动性指标需要连续日数据
+- 数据不足时策略计算结果不可靠，直接跳过避免误导
+
+**预热期间每天做什么？**
+1. 扫描 Registry → 构建 Universe
+2. 同步当日收盘数据 (4线程并发)
+3. 统计每只股票的交易日天数
+4. 当 min_days ≥ 30 后自动切换到完整 Pipeline
+
+**你可以做什么？**
+- 每天打开看看数据覆盖率在增长
+- 等 min_days 到 30，策略板块会自动上线
+- 不需要手动操作，全自动
+""")
+    st.divider()
+
 # ═══════════════════════ 数据资产栏 ═══════════════════════
 collection_days = _read_json("collection_days.json")
 csv_dir = "data/raw/daily"
@@ -85,7 +133,7 @@ else:
 
 # ═══════════════════════ ① 系统健康 (顶栏) ═══════════════════════
 sys_health = _read_json("system_health.json")
-if sys_health:
+if sys_health and not _is_warmup:
     sh_score = sys_health.get("score", 0)
     sh_level = sys_health.get("level", "?")
     sh_date = sys_health.get("date", "")
@@ -102,7 +150,7 @@ if sys_health:
 
 # ═══════════════════════ 执行决策卡片 ═══════════════════════
 daily_report = _read_json("daily_report.json")
-if daily_report:
+if daily_report and not _is_warmup:
     exec_data = daily_report.get("execution", {})
     if exec_data:
         st.divider()
@@ -138,7 +186,9 @@ st.divider()
 
 # ═══════════════════════ ② Markdown 日报 (核心展示) ═══════════════════════
 md_path = _read("daily_report.md")
-if md_path:
+if _is_warmup:
+    st.info("📡 策略日报将在预热完成后 (min_days ≥ 30) 自动生成")
+elif md_path:
     with open(md_path, encoding="utf-8") as f:
         report_md = f.read()
     st.markdown(report_md, unsafe_allow_html=False)
@@ -148,46 +198,47 @@ else:
 st.divider()
 
 # ═══════════════════════ ③ 微信版 + 下载 ═══════════════════════
-wx_path = _read("daily_report_wechat.txt")
-col_wx, col_dl = st.columns([3, 1])
+if not _is_warmup:
+    wx_path = _read("daily_report_wechat.txt")
+    col_wx, col_dl = st.columns([3, 1])
 
-with col_wx:
-    st.subheader("📱 微信版日报")
-    if wx_path:
-        with open(wx_path, encoding="utf-8") as f:
-            wx_text = f.read()
-        st.text_area("全选复制 → 粘贴到微信", wx_text, height=180,
-                     label_visibility="collapsed")
-    else:
-        st.info("暂无微信版报告")
+    with col_wx:
+        st.subheader("📱 微信版日报")
+        if wx_path:
+            with open(wx_path, encoding="utf-8") as f:
+                wx_text = f.read()
+            st.text_area("全选复制 → 粘贴到微信", wx_text, height=180,
+                         label_visibility="collapsed")
+        else:
+            st.info("暂无微信版报告")
 
-with col_dl:
-    st.subheader("⬇️ 下载")
-    if md_path:
-        st.download_button(
-            "📥 下载日报 .md",
-            data=report_md,
-            file_name=f"RunDogRun_{today_str}.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
-    if wx_path:
-        st.download_button(
-            "📥 下载微信版 .txt",
-            data=wx_text,
-            file_name=f"RunDogRun_{today_str}_wx.txt",
-            mime="text/plain",
-            use_container_width=True,
-        )
+    with col_dl:
+        st.subheader("⬇️ 下载")
+        if md_path:
+            st.download_button(
+                "📥 下载日报 .md",
+                data=report_md,
+                file_name=f"RunDogRun_{today_str}.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
+        if wx_path:
+            st.download_button(
+                "📥 下载微信版 .txt",
+                data=wx_text,
+                file_name=f"RunDogRun_{today_str}_wx.txt",
+                mime="text/plain",
+                use_container_width=True,
+            )
 
 st.divider()
 
 # ═══════════════════════ ④ 折叠详情 ═══════════════════════
 
-# 持仓偏离分析
+# 持仓偏离分析 (预热期跳过)
 holdings_path = "data/holdings.json"
 uni_path = "data/universe_cache.json"
-if os.path.exists(holdings_path) and os.path.exists(uni_path):
+if not _is_warmup and os.path.exists(holdings_path) and os.path.exists(uni_path):
     with st.expander("🧠 持仓偏离分析"):
         try:
             with open(holdings_path) as f:
@@ -233,12 +284,13 @@ if pipeline_log:
             st.caption(f"{icon} `{s['step']}`  {s.get('detail', '')}  _{s.get('time', '')}_")
 
 # 回测曲线
-equity_data = _read_json("equity_curve.json")
-if equity_data:
-    curve = equity_data.get("curve", [])
-    if curve and len(curve) > 1:
-        with st.expander("📉 回测曲线"):
-            st.line_chart(curve)
+if not _is_warmup:
+    equity_data = _read_json("equity_curve.json")
+    if equity_data:
+        curve = equity_data.get("curve", [])
+        if curve and len(curve) > 1:
+            with st.expander("📉 回测曲线"):
+                st.line_chart(curve)
 
 # 数据仓库
 csv_dir = "data/raw/daily"
@@ -250,72 +302,73 @@ if csv_count > 0:
         st.caption(f"完整 {csv_count} 只 → data/raw/daily/")
 
 # ═══════════════════════ V3 分析板块 ═══════════════════════
-st.divider()
-st.subheader("📊 V3 策略质量分析")
+if not _is_warmup:
+    st.divider()
+    st.subheader("📊 V3 策略质量分析")
 
-# IC 报告
-ic_data = _read_json("ic_report.json")
-if ic_data:
-    with st.expander("📈 IC 分析 (Score 预测力)"):
-        ic5 = ic_data.get("ic_5d", {})
-        ric5 = ic_data.get("rank_ic_5d", {})
-        decay = ic_data.get("ic_decay", {})
-        rolling = ic_data.get("rolling_ic", [])
+    # IC 报告
+    ic_data = _read_json("ic_report.json")
+    if ic_data:
+        with st.expander("📈 IC 分析 (Score 预测力)"):
+            ic5 = ic_data.get("ic_5d", {})
+            ric5 = ic_data.get("rank_ic_5d", {})
+            decay = ic_data.get("ic_decay", {})
+            rolling = ic_data.get("rolling_ic", [])
 
-        c1, c2, c3 = st.columns(3)
-        ic_v = ic5.get("ic")
-        c1.metric("IC (5日)", f"{ic_v:+.4f}" if ic_v else "--",
-                 delta="正向预测" if (ic_v and ic_v > 0) else "无效")
-        ric_v = ric5.get("rank_ic")
-        c2.metric("Rank IC", f"{ric_v:+.4f}" if ric_v else "--")
-        c3.metric("信号总数", ic_data.get("n_signals", 0))
+            c1, c2, c3 = st.columns(3)
+            ic_v = ic5.get("ic")
+            c1.metric("IC (5日)", f"{ic_v:+.4f}" if ic_v else "--",
+                     delta="正向预测" if (ic_v and ic_v > 0) else "无效")
+            ric_v = ric5.get("rank_ic")
+            c2.metric("Rank IC", f"{ric_v:+.4f}" if ric_v else "--")
+            c3.metric("信号总数", ic_data.get("n_signals", 0))
 
-        if decay:
-            st.caption(f"IC 衰减: " + " | ".join(f"{k}={v:+.4f}" if v else f"{k}=N/A" for k, v in decay.items()))
-        if rolling:
-            st.line_chart({r["date"]: r["ic"] for r in rolling}, use_container_width=True)
+            if decay:
+                st.caption(f"IC 衰减: " + " | ".join(f"{k}={v:+.4f}" if v else f"{k}=N/A" for k, v in decay.items()))
+            if rolling:
+                st.line_chart({r["date"]: r["ic"] for r in rolling}, use_container_width=True)
 
-# 分桶报告
-bucket_data = _read_json("bucket_report.json")
-if bucket_data:
-    buckets = bucket_data.get("buckets", [])
-    if buckets:
-        with st.expander("🔍 评分分桶收益 (Score越高收益越高?)"):
-            import pandas as pd
-            bdf = pd.DataFrame([b for b in buckets if b.get("count", 0) > 0])
-            if not bdf.empty:
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.bar_chart(bdf.set_index("bucket")["avg_return"], use_container_width=True)
-                with c2:
-                    st.dataframe(bdf[["bucket", "count", "avg_return", "win_rate", "sharpe"]],
-                                use_container_width=True, hide_index=True)
+    # 分桶报告
+    bucket_data = _read_json("bucket_report.json")
+    if bucket_data:
+        buckets = bucket_data.get("buckets", [])
+        if buckets:
+            with st.expander("🔍 评分分桶收益 (Score越高收益越高?)"):
+                import pandas as pd
+                bdf = pd.DataFrame([b for b in buckets if b.get("count", 0) > 0])
+                if not bdf.empty:
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.bar_chart(bdf.set_index("bucket")["avg_return"], use_container_width=True)
+                    with c2:
+                        st.dataframe(bdf[["bucket", "count", "avg_return", "win_rate", "sharpe"]],
+                                    use_container_width=True, hide_index=True)
 
-# 模拟交易
-sim_data = _read_json("sim_pnl.json")
-if sim_data:
-    m = sim_data.get("metrics", {})
-    if m:
-        with st.expander("📉 模拟交易 (score≥60买入,持有5天)"):
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("总收益", f"{m.get('total_return', 0):+.2%}")
-            c2.metric("胜率", f"{m.get('win_rate', 0):.0%}")
-            c3.metric("夏普", m.get("sharpe", 0))
-            c4.metric("交易次数", m.get("n_trades", 0))
-            curve = sim_data.get("pnl_curve", [])
-            if curve:
-                st.line_chart(curve, use_container_width=True)
+    # 模拟交易
+    sim_data = _read_json("sim_pnl.json")
+    if sim_data:
+        m = sim_data.get("metrics", {})
+        if m:
+            with st.expander("📉 模拟交易 (score≥60买入,持有5天)"):
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("总收益", f"{m.get('total_return', 0):+.2%}")
+                c2.metric("胜率", f"{m.get('win_rate', 0):.0%}")
+                c3.metric("夏普", m.get("sharpe", 0))
+                c4.metric("交易次数", m.get("n_trades", 0))
+                curve = sim_data.get("pnl_curve", [])
+                if curve:
+                    st.line_chart(curve, use_container_width=True)
 
-# 权重面板
-weights_path = "data/weights.json"
-if os.path.exists(weights_path):
-    with st.expander("🔧 因子权重配置"):
-        import json as _json
-        with open(weights_path) as f:
-            w = _json.load(f)
-        for k, v in w.items():
-            labels = {"momentum": "动量(涨跌幅)", "price_value": "低价偏好", "volume": "成交量", "sector": "板块加成"}
-            st.caption(f"{labels.get(k, k)}: **{v:.1%}**")
+    # 权重面板
+    weights_path = "data/weights.json"
+    if os.path.exists(weights_path):
+        with st.expander("🔧 因子权重配置"):
+            import json as _json
+            with open(weights_path) as f:
+                w = _json.load(f)
+            for k, v in w.items():
+                labels = {"momentum": "动量(涨跌幅)", "price_value": "低价偏好", "volume": "成交量", "sector": "板块加成"}
+                st.caption(f"{labels.get(k, k)}: **{v:.1%}**")
 
 # 使用说明书
 with st.expander("📖 使用说明书"):

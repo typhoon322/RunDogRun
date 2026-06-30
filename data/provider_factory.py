@@ -10,6 +10,7 @@ data/provider_factory.py — 可插拔数据源工厂
 """
 import logging
 import os
+import threading
 import time
 from typing import Protocol
 
@@ -369,12 +370,15 @@ class ProviderFactory:
         return self.providers[0].name if self.providers else "none"
 
 
-# 全局单例
+# 全局单例 (线程安全)
 _factory: ProviderFactory | None = None
+_factory_lock = threading.Lock()
 
 
 def get_factory() -> ProviderFactory:
     global _factory
     if _factory is None:
-        _factory = ProviderFactory()
+        with _factory_lock:
+            if _factory is None:
+                _factory = ProviderFactory()
     return _factory

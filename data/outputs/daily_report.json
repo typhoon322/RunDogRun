@@ -1,75 +1,40 @@
 {
-  "date": "2026-06-29",
-  "timestamp": "2026-06-29T00:29:15.459125",
-  "version": "2.2.0",
-  "symbol": "PORTFOLIO-5",
-  "live_signal": {
-    "portfolio": [
-      {
-        "code": "601016",
-        "name": "节能风电",
-        "price": 3.94,
-        "score": 10.24,
-        "weight": 0.233
-      },
-      {
-        "code": "688432",
-        "name": "有研硅",
-        "price": 30.9,
-        "score": 9.05,
-        "weight": 0.206
-      },
-      {
-        "code": "002141",
-        "name": "贤丰控股",
-        "price": 5.76,
-        "score": 8.55,
-        "weight": 0.194
-      },
-      {
-        "code": "002225",
-        "name": "濮耐股份",
-        "price": 4.62,
-        "score": 8.23,
-        "weight": 0.187
-      },
-      {
-        "code": "300088",
-        "name": "长信科技",
-        "price": 11.67,
-        "score": 7.95,
-        "weight": 0.181
-      }
-    ],
-    "metrics": {
-      "total_return": -1.61,
-      "max_drawdown": 20.0,
-      "sharpe": 0.0,
-      "win_rate": 0.5,
-      "volatility": 1.35
-    },
-    "status": "CAUTION"
+  "date": "2026-07-01",
+  "timestamp": "2026-07-01T00:50:45.101039+08:00",
+  "version": "2.5-final",
+  "pipeline_status": "DATA_ONLY",
+  "mode": "warmup",
+  "registry_stats": {
+    "total_csv": 469,
+    "loaded_into_memory": 0,
+    "bad_files": 0,
+    "coverage_pct": 0.0,
+    "sample": [
+      "000001",
+      "000002",
+      "000012",
+      "000021",
+      "000032"
+    ]
   },
-  "backtest": {
-    "total_return_pct": 0,
-    "annual_return_pct": 0,
-    "max_drawdown_pct": 0,
-    "win_rate": 0.5,
-    "avg_win_pct": 0,
-    "avg_loss_pct": 0,
-    "total_trades": 0
+  "universe_size": 300,
+  "data_days": {
+    "csv_count": 493,
+    "total_trading_days": 192,
+    "date_range": "2025-09-09 ~ 2026-06-30",
+    "first_date": "2025-09-09",
+    "last_date": "2026-06-30",
+    "updated_at": "2026-07-01T00:50:45.100490+08:00",
+    "per_stock_stats": {
+      "max_days": 180,
+      "min_days": 3,
+      "avg_days": 179.3
+    }
   },
-  "strategy_health": "RISKY 🔴",
-  "monitor": {
-    "status": "CAUTION",
-    "health_score": 60,
-    "rating": "STABLE ⚡",
-    "trend": "stable →",
-    "note": "建议降仓, 观察回撤"
-  },
-  "consistency": {
-    "csv_ok": 413,
-    "csv_total": 414,
-    "registry_total": 414
+  "warmup": {
+    "min_days": 3,
+    "target_days": 30,
+    "remaining_days": 27,
+    "progress": "3/30"
   }
 }
