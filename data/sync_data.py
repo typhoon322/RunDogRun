@@ -15,25 +15,20 @@ from data.provider_factory import get_factory
 DATA_DIR = "data/raw/daily"
 
 
-def sync_stock(code: str, retries: int = 2) -> str | None:
-    """拉取单只股票数据, 主源失败自动切备源, 最多重试2次"""
-    # 防御性保险: 确保 os 在当前作用域可用
-    # (某些 Linux/CI 环境下依赖库内部可能污染模块命名空间)
+def sync_stock(code: str, retries: int = 0) -> str | None:
+    """拉取单只股票数据, 主源失败自动切备源 (factory 内部已做 failover)"""
     import os as _os
     factory = get_factory()
-    for attempt in range(retries + 1):
-        try:
-            df = factory.fetch_history(code)
-            if df is not None and not df.empty:
-                df = df.tail(180)
-                _os.makedirs(DATA_DIR, exist_ok=True)
-                path = f"{DATA_DIR}/{code}.csv"
-                df.to_csv(path, index=False)
-                return path
-        except Exception:
-            pass
-        if attempt < retries:
-            time.sleep(2)
+    try:
+        df = factory.fetch_history(code)
+        if df is not None and not df.empty:
+            df = df.tail(180)
+            _os.makedirs(DATA_DIR, exist_ok=True)
+            path = f"{DATA_DIR}/{code}.csv"
+            df.to_csv(path, index=False)
+            return path
+    except Exception:
+        pass
     return None
 
 
@@ -55,23 +50,39 @@ def need_update(code: str) -> bool:
 def sync_universe(codes: list[str], max_new: int = 30) -> dict:
     """
     检查并补齐缺失数据。只处理新股票(最多 max_new 只避免API过载)。
-    每只股票之间间隔1.5秒，防止东方财富反爬限流。
+    使用并发线程池加速同步 (4线程), 每线程内部顺序请求各数据源。
     """
-    import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    # 先筛出需要同步的
+    to_sync = [c for c in codes if need_update(c)][:max_new]
+    skip = len(codes) - len(to_sync)
+
+    if not to_sync:
+        print(f"数据同步: 0 新增, {skip} 已有缓存")
+        return {"new": 0, "skip": skip}
+
     ok = 0
-    skip = 0
-    for code in codes:
-        if not need_update(code):
-            skip += 1
-            continue
-        if ok >= max_new:
-            break
+    failed = []
+
+    def _sync_one(code: str) -> tuple[str, bool]:
         try:
             path = sync_stock(code)
-            if path:
+            return (code, path is not None)
+        except Exception:
+            return (code, False)
+
+    # 4线程并发, 每个线程内 factory 顺序尝试各数据源
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = {pool.submit(_sync_one, c): c for c in to_sync}
+        for future in as_completed(futures):
+            code, success = future.result()
+            if success:
                 ok += 1
-            time.sleep(1.5)  # 请求间隔，防止反爬
-        except Exception as e:
-            print(f"  ❌ {code}: {e}")
-    print(f"数据同步: {ok} 新增, {skip} 已有缓存")
-    return {"new": ok, "skip": skip}
+            else:
+                failed.append(code)
+
+    if failed:
+        print(f"  ⚠️ {len(failed)} 只同步失败: {failed[:5]}{'...' if len(failed) > 5 else ''}")
+    print(f"数据同步: {ok} 新增, {skip} 已有缓存, {len(failed)} 失败")
+    return {"new": ok, "skip": skip, "failed": len(failed)}

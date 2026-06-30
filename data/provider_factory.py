@@ -65,7 +65,7 @@ class EastMoneyProvider:
                 f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
             )
 
-            resp = requests.get(url, timeout=15,
+            resp = requests.get(url, timeout=8,
                                headers={"User-Agent": "Mozilla/5.0"})
             data = resp.json()
             if data.get("rc") != 0 or not data.get("data"):
@@ -127,7 +127,7 @@ class SinaProvider:
                 sina_code = f"sz{raw}"
 
             url = f"https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={sina_code}&scale=240&ma=no&datalen=1023"
-            resp = requests.get(url, timeout=15,
+            resp = requests.get(url, timeout=8,
                                headers={"User-Agent": "Mozilla/5.0"})
             data = resp.json()
             if not data:
@@ -181,7 +181,7 @@ class TencentProvider:
                 tx_code = f"sz{raw}"
 
             url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={tx_code},day,,,1023,qfq"
-            resp = requests.get(url, timeout=15,
+            resp = requests.get(url, timeout=8,
                                headers={"User-Agent": "Mozilla/5.0"})
             data = resp.json()
             klines = data.get("data", {}).get(tx_code, {}).get("qfqday") or \
@@ -324,14 +324,17 @@ class ProviderFactory:
 
     def __init__(self):
         self.providers: list[DataProvider] = []
+        self._fail_count: dict[str, int] = {}  # 熔断计数器
         # 按优先级注册 (先注册=主源)
-        self.register(EastMoneyProvider())   # 主源: 直连东方财富HTTP
-        self.register(SinaProvider())         # 备源2: 新浪财经
-        self.register(TencentProvider())      # 备源3: 腾讯财经
+        self.register(EastMoneyProvider())   # 主源: 直连东方财富HTTP (8s超时)
+        self.register(SinaProvider())         # 备源2: 新浪财经 (8s超时)
+        self.register(TencentProvider())      # 备源3: 腾讯财经 (8s超时)
         # AKShare: 仅在本地环境启用 (GitHub Actions 上持续 RemoteDisconnected)
         if not os.environ.get("GITHUB_ACTIONS"):
             self.register(AKShareProvider())
-        self.register(BaostockProvider())     # 备源: Baostock
+        # Baostock: GH Actions 上 login/logout 每次调用太慢, 跳过
+        if not os.environ.get("GITHUB_ACTIONS"):
+            self.register(BaostockProvider())
 
     def register(self, provider: DataProvider):
         """注册数据源 (后注册的优先级低)"""
@@ -339,23 +342,26 @@ class ProviderFactory:
         logger.info(f"注册数据源: {provider.name}")
 
     def fetch_history(self, code: str, start_date: str = "20240101",
-                      retries: int = 1) -> "pd.DataFrame | None":
+                      retries: int = 0) -> "pd.DataFrame | None":
         """
         按优先级尝试所有数据源, 主源失败自动切备源。
-        每个源最多试 retries+1 次, 失败后静默切换下一个源。
+        每个源只试1次 (retries=0), 快速失败快速切换。
         """
         for provider in self.providers:
-            for attempt in range(retries + 1):
-                try:
-                    df = provider.fetch_history(code, start_date)
-                    if df is not None and not df.empty:
-                        if provider.name != self.providers[0].name:
-                            logger.info(f"备源 {provider.name} 成功: {code}")
-                        return df
-                except Exception:
-                    pass
-                if attempt < retries:
-                    time.sleep(1.5)
+            # 熔断: 连续失败3次的 provider 跳过
+            if self._fail_count.get(provider.name, 0) >= 3:
+                continue
+            try:
+                df = provider.fetch_history(code, start_date)
+                if df is not None and not df.empty:
+                    self._fail_count[provider.name] = 0  # 重置
+                    if provider.name != self.providers[0].name:
+                        logger.info(f"备源 {provider.name} 成功: {code}")
+                    return df
+                else:
+                    self._fail_count[provider.name] = self._fail_count.get(provider.name, 0) + 1
+            except Exception:
+                self._fail_count[provider.name] = self._fail_count.get(provider.name, 0) + 1
         return None
 
     @property

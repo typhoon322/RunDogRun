@@ -92,7 +92,7 @@ def run_pipeline(top_n: int = 5):
     # ═══════════════════════════════════════════════
     from data.sync_data import sync_universe
     if universe:
-        sync_universe(universe, max_new=30)
+        sync_universe(universe, max_new=60)
         print(f"📥 ③ SYNC: Universe 数据已补齐")
         step("03_sync", "ok", f"synced for {len(universe)} codes")
     else:
