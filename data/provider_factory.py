@@ -28,7 +28,80 @@ class DataProvider(Protocol):
 
 
 # ═══════════════════════════════════════════
-# Provider 1: AKShare (东方财富, 主源)
+# Provider 1: 东方财富 HTTP (直接调API, 不依赖AKShare)
+# ═══════════════════════════════════════════
+
+class EastMoneyProvider:
+    """直接调东方财富 HTTP API, 绕过 AKShare 的网络问题"""
+    name = "eastmoney"
+
+    def fetch_history(self, code: str, start_date: str = "20240101"):
+        try:
+            import requests
+            import pandas as pd
+
+            # 纯数字代码
+            raw = str(code)
+            for prefix in ["sh", "sz", "bj"]:
+                if raw.startswith(prefix) and len(raw) == len(prefix) + 6:
+                    raw = raw[len(prefix):]
+                    break
+
+            # 判断市场
+            if raw.startswith(("6", "5", "9")):
+                secid = f"1.{raw}"
+            else:
+                secid = f"0.{raw}"
+
+            # 日期格式转换: 20240101 → 20240101
+            beg = start_date.replace("-", "") if "-" in start_date else start_date
+
+            url = (
+                f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
+                f"?secid={secid}&klt=101&fqt=1"
+                f"&beg={beg}&end=20991231"
+                f"&fields1=f1,f2,f3,f4,f5,f6"
+                f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
+            )
+
+            resp = requests.get(url, timeout=15,
+                               headers={"User-Agent": "Mozilla/5.0"})
+            data = resp.json()
+            if data.get("rc") != 0 or not data.get("data"):
+                return None
+
+            klines = data["data"].get("klines", [])
+            if not klines:
+                return None
+
+            rows = []
+            for line in klines:
+                parts = line.split(",")
+                if len(parts) >= 11:
+                    rows.append({
+                        "日期": parts[0],
+                        "开盘": float(parts[1]) if parts[1] != "-" else None,
+                        "收盘": float(parts[2]) if parts[2] != "-" else None,
+                        "最高": float(parts[3]) if parts[3] != "-" else None,
+                        "最低": float(parts[4]) if parts[4] != "-" else None,
+                        "成交量": float(parts[5]) if parts[5] != "-" else None,
+                        "成交额": float(parts[6]) if parts[6] != "-" else None,
+                        "振幅": float(parts[7]) if parts[7] != "-" else None,
+                        "涨跌幅": float(parts[8]) if parts[8] != "-" else None,
+                        "涨跌额": float(parts[9]) if parts[9] != "-" else None,
+                        "换手率": float(parts[10]) if parts[10] != "-" else None,
+                    })
+
+            if not rows:
+                return None
+            return pd.DataFrame(rows)
+
+        except Exception:
+            return None
+
+
+# ═══════════════════════════════════════════
+# Provider 2: AKShare (兜底)
 # ═══════════════════════════════════════════
 
 class AKShareProvider:
@@ -138,9 +211,10 @@ class ProviderFactory:
 
     def __init__(self):
         self.providers: list[DataProvider] = []
-        # 按优先级注册
-        self.register(AKShareProvider())
-        self.register(BaostockProvider())
+        # 按优先级注册 (先注册=主源)
+        self.register(EastMoneyProvider())   # 主源: 直连东方财富HTTP
+        self.register(AKShareProvider())      # 备源: AKShare库
+        self.register(BaostockProvider())     # 备源: Baostock
 
     def register(self, provider: DataProvider):
         """注册数据源 (后注册的优先级低)"""
