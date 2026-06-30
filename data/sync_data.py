@@ -52,10 +52,12 @@ def sync_stock(code: str, retries: int = 2) -> str | None:
     raise last_error
 
 
-def sync_universe(codes: list[str], max_new: int = 50) -> dict:
+def sync_universe(codes: list[str], max_new: int = 30) -> dict:
     """
     检查并补齐缺失数据。只处理新股票(最多 max_new 只避免API过载)。
+    每只股票之间间隔1.5秒，防止东方财富反爬限流。
     """
+    import time
     ok = 0
     skip = 0
     for code in codes:
@@ -68,6 +70,7 @@ def sync_universe(codes: list[str], max_new: int = 50) -> dict:
             path = sync_stock(code)
             if path:
                 ok += 1
+            time.sleep(1.5)  # 请求间隔，防止反爬
         except Exception as e:
             print(f"  ❌ {code}: {e}")
     print(f"数据同步: {ok} 新增, {skip} 已有缓存")
