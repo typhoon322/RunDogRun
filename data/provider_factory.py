@@ -75,7 +75,11 @@ class BaostockProvider:
                 else:
                     bs_code = f"sz.{raw}"
 
-            bs.login()
+            lg = bs.login()
+            if lg is None or lg.error_code != "0":
+                bs.logout()
+                return None
+
             rs = bs.query_history_k_data_plus(
                 bs_code,
                 "date,open,close,high,low,volume,amount,amplitude,pctChg,change,turn",
@@ -83,8 +87,8 @@ class BaostockProvider:
                 frequency="d",
                 adjustflag="2",  # 前复权
             )
-            if rs.error_code != "0":
-                logger.warning(f"Baostock [{code}]: {rs.error_msg}")
+            if rs is None or rs.error_code != "0":
+                err = rs.error_msg if rs else "无响应"
                 bs.logout()
                 return None
 
@@ -147,9 +151,7 @@ class ProviderFactory:
                       retries: int = 1) -> "pd.DataFrame | None":
         """
         按优先级尝试所有数据源, 主源失败自动切备源。
-
-        Returns:
-            DataFrame 或 None (所有源都失败)
+        每个源最多试 retries+1 次, 失败后静默切换下一个源。
         """
         for provider in self.providers:
             for attempt in range(retries + 1):
@@ -159,16 +161,10 @@ class ProviderFactory:
                         if provider.name != self.providers[0].name:
                             logger.info(f"备源 {provider.name} 成功: {code}")
                         return df
-                except Exception as e:
-                    pass  # 静默, 下面统一处理
+                except Exception:
+                    pass
                 if attempt < retries:
-                    time.sleep(1)
-            # 只在全部重试失败后才输出一条 warning (不是每条重试都打)
-            if retries > 0:
-                logger.warning(f"{provider.name}[{code}] 重试{retries}次均失败")
-            else:
-                logger.warning(f"{provider.name}[{code}] 失败, 切换备源")
-
+                    time.sleep(1.5)
         return None
 
     @property
