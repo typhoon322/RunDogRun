@@ -66,11 +66,16 @@ else:
 
 today_str = now.strftime("%Y-%m-%d")
 
-# ═══════════════════════ 预热模式检测 ═══════════════════════
+# ═══════════════════════ 阶段检测 (3-phase Smart Warm-up) ═══════════════════════
 daily_report = _read_json("daily_report.json")
-_is_warmup = False
-if daily_report and daily_report.get("pipeline_status") == "DATA_ONLY":
-    _is_warmup = True
+_phase = 3  # 默认完整模式
+if daily_report:
+    status = daily_report.get("pipeline_status", "")
+    if status in ("COLD_START", "DATA_ONLY"):  # DATA_ONLY = 向后兼容
+        _phase = 1
+    elif status == "WARMUP_STAT":
+        _phase = 2
+_is_warmup = _phase < 3
 
 if _is_warmup:
     warmup = daily_report.get("warmup", {})
@@ -81,9 +86,15 @@ if _is_warmup:
     remaining = warmup.get("remaining_days", 0)
     progress_pct = min(min_d / target_d, 1.0)
 
-    st.warning("⏳ **数据预热中** — 前30天仅收集数据，不执行策略计算")
+    # Phase 标签
+    phase_labels = {
+        1: "❄️ Phase 1: 冷启动 (仅数据收集)",
+        2: "🔥 Phase 2: 预热统计 (评分+信号+IC, 不交易)",
+    }
+    st.warning(f"{phase_labels.get(_phase, '⏳ 预热中')} — min_days={min_d}/{target_d}")
     st.progress(progress_pct, text=f"预热进度: {min_d}/{target_d} 天 · 还需约 {remaining} 个交易日")
 
+    # 数据覆盖率指标
     wc1, wc2, wc3, wc4, wc5 = st.columns(5)
     wc1.metric("📦 CSV 总量", f"{data_days.get('csv_count', reg_stats.get('total_csv', 0))}")
     wc2.metric("📅 交易日", f"{data_days.get('total_trading_days', 0)} 天")
@@ -95,23 +106,95 @@ if _is_warmup:
     st.caption(f"📅 数据范围: {data_days.get('date_range', '--')} · "
                f"最后更新: {data_days.get('last_date', '--')}")
 
+    # ═══ Phase 2: 统计看板 ═══
+    if _phase == 2:
+        wstats = daily_report.get("warmup_stats", {})
+        if wstats:
+            st.divider()
+            st.subheader("📊 预热统计看板")
+
+            sc1, sc2, sc3, sc4 = st.columns(4)
+            sc1.metric("📋 评分股票", f"{wstats.get('score_count', 0)} 只")
+            sc2.metric("📝 累计信号", f"{wstats.get('signal_count', 0)} 条")
+            ic_v = wstats.get("ic_5d")
+            sc3.metric("📈 IC (5日)", f"{ic_v:+.4f}" if ic_v is not None else "积累中",
+                       delta="🟢 有效" if (ic_v and ic_v > 0.03) else "⏳ 待积累")
+            ric_v = wstats.get("rank_ic_5d")
+            sc4.metric("📊 Rank IC", f"{ric_v:+.4f}" if ric_v is not None else "积累中")
+
+            # Score 分布
+            dist = wstats.get("score_distribution", [])
+            if dist:
+                with st.expander("📊 Score 分布"):
+                    import pandas as _pd
+                    ddf = _pd.DataFrame(dist)
+                    if not ddf.empty:
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.bar_chart(ddf.set_index("bucket")["count"], use_container_width=True)
+                        with c2:
+                            st.dataframe(ddf, use_container_width=True, hide_index=True)
+
+            # 因子统计
+            factor_stats = wstats.get("factor_stats", {})
+            if factor_stats:
+                with st.expander("🔧 因子统计 (trend / flow / value)"):
+                    rows = []
+                    for fname, fstats in factor_stats.items():
+                        rows.append({
+                            "因子": fname,
+                            "均值": fstats.get("mean", 0),
+                            "标准差": fstats.get("std", 0),
+                            "最小值": fstats.get("min", 0),
+                            "最大值": fstats.get("max", 0),
+                        })
+                    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+            # Top 10 评分股票
+            top_stocks = wstats.get("top_stocks", [])
+            if top_stocks:
+                with st.expander("🏆 Top 10 评分股票 (仅供参考, 不构成交易建议)"):
+                    st.dataframe(top_stocks, use_container_width=True, hide_index=True)
+
+            # IC 衰减
+            ic_decay = wstats.get("ic_decay", {})
+            if ic_decay:
+                with st.expander("📉 IC 衰减曲线"):
+                    decay_items = [(k, v) for k, v in ic_decay.items() if v is not None]
+                    if decay_items:
+                        st.bar_chart({k: v for k, v in decay_items}, use_container_width=True)
+                        st.caption("IC 衰减: 不同持有期限下 Score 的预测力变化")
+
+            # 分桶
+            buckets = wstats.get("buckets", [])
+            if buckets:
+                with st.expander("🔍 评分分桶收益 (积累中)"):
+                    valid_buckets = [b for b in buckets if b.get("count", 0) > 0]
+                    if valid_buckets:
+                        st.dataframe(valid_buckets, use_container_width=True, hide_index=True)
+                    else:
+                        st.caption("⏳ 分桶数据积累中, 需更多信号")
+
     with st.expander("📖 预热说明"):
         st.markdown("""
-**为什么需要预热？**
-- 部分新纳入 Universe 的股票历史数据不足 30 天
-- 趋势因子 (MA5/MA20)、流动性指标需要连续日数据
-- 数据不足时策略计算结果不可靠，直接跳过避免误导
+**三阶段智能预热**
 
-**预热期间每天做什么？**
-1. 扫描 Registry → 构建 Universe
-2. 同步当日收盘数据 (4线程并发)
-3. 统计每只股票的交易日天数
-4. 当 min_days ≥ 30 后自动切换到完整 Pipeline
+| 阶段 | 条件 | 做什么 | 不做什么 |
+|------|------|--------|----------|
+| ❄️ Phase 1 | min_days < 10 | 数据收集 | 评分、交易 |
+| 🔥 Phase 2 | 10 ≤ min < 30 | 评分、信号记录、IC/分桶统计 | 交易决策、仓位 |
+| 🚀 Phase 3 | min_days ≥ 30 | 完整闭环 | — |
+
+**Phase 2 的价值**
+- 每天计算 Score 并记录信号, 但不做交易决策
+- 积累 IC (信息系数) 统计, 验证 Score 的预测力
+- 分桶分析: 高分股是否真的收益更高?
+- 等 min_days ≥ 30 后自动进入 Phase 3 完整交易
 
 **你可以做什么？**
-- 每天打开看看数据覆盖率在增长
-- 等 min_days 到 30，策略板块会自动上线
-- 不需要手动操作，全自动
+- Phase 1: 看数据覆盖率增长
+- Phase 2: 看 Score 分布、IC 趋势、分桶验证
+- Phase 3: 完整策略日报、执行决策、回测曲线
 """)
     st.divider()
 

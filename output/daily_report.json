@@ -1,11 +1,12 @@
 {
   "date": "2026-07-01",
-  "timestamp": "2026-07-01T00:50:45.101039+08:00",
-  "version": "2.5-final",
-  "pipeline_status": "DATA_ONLY",
-  "mode": "warmup",
+  "timestamp": "2026-07-01T01:05:34.124277+08:00",
+  "version": "2.6",
+  "pipeline_status": "COLD_START",
+  "phase": 1,
+  "mode": "cold_start",
   "registry_stats": {
-    "total_csv": 469,
+    "total_csv": 494,
     "loaded_into_memory": 0,
     "bad_files": 0,
     "coverage_pct": 0.0,
@@ -19,12 +20,12 @@
   },
   "universe_size": 300,
   "data_days": {
-    "csv_count": 493,
+    "csv_count": 497,
     "total_trading_days": 192,
     "date_range": "2025-09-09 ~ 2026-06-30",
     "first_date": "2025-09-09",
     "last_date": "2026-06-30",
-    "updated_at": "2026-07-01T00:50:45.100490+08:00",
+    "updated_at": "2026-07-01T01:05:34.123747+08:00",
     "per_stock_stats": {
       "max_days": 180,
       "min_days": 3,
@@ -33,6 +34,9 @@
   },
   "warmup": {
     "min_days": 3,
+    "phase": 1,
+    "phase_label": "COLD START",
+    "next_phase_days": 10,
     "target_days": 30,
     "remaining_days": 27,
     "progress": "3/30"

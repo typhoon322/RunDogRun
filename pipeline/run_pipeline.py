@@ -1,17 +1,16 @@
 """
-pipeline/run_pipeline.py — v2.5 Final 统一闭环流水线
+pipeline/run_pipeline.py — v2.6 Smart Warm-up 流水线
 ============================================================
 唯一执行入口: GitHub Actions 定时触发 → 本地也可手动运行
 
-闭环:
-  Registry扫描 → Universe生成 → 数据补齐 → 市场过滤 →
-  行业过滤 → 选股排名 → 组合配置 → 回测(Registry) →
-  监控评分 → 日报输出 → output/
+三阶段智能预热:
+  Phase 1 — cold_start (min_days < 10):  仅数据收集 ①②③
+  Phase 2 — warmup_stat (10 ≤ min < 30): 数据+评分+信号+IC/分桶 (不交易)
+  Phase 3 — full (min_days ≥ 30):        完整闭环 (评分+回测+决策+推送)
 
 用法:
   python pipeline/run_pipeline.py [--top 5] [--data-only]
-  --data-only: 仅执行数据收集 (①②③), 跳过策略计算
-               预热期使用, 等 min_days >= 30 后自动切回完整模式
+  --data-only: 强制 Phase 1 (跳过策略计算, 手动覆盖)
 """
 import json
 import logging
@@ -54,24 +53,38 @@ def save_json(data: dict, filename: str):
 def run_pipeline(top_n: int = 5, data_only: bool = False):
     """主流水线 — 单次执行完成全部环节
 
-    data_only=True: 仅执行 ①②③ 数据收集, 跳过策略计算 (预热期)
+    三阶段智能预热:
+      Phase 1 cold_start:  min_days < 10,  仅数据收集
+      Phase 2 warmup_stat: 10 ≤ min < 30, 评分+信号+IC (不交易)
+      Phase 3 full:        min_days ≥ 30,  完整闭环
     """
     t0 = now_cn()
     steps = []
 
-    # 预热期自动检测: min_days < 30 时强制 data-only
-    if not data_only:
-        try:
-            from core.data_days import compute_collection_days
-            days_info = compute_collection_days()
-            min_days = days_info.get("per_stock_stats", {}).get("min_days", 0)
-            if min_days < 30:
-                data_only = True
-                logger.info(f"🔄 预热期 (min_days={min_days} < 30) — 仅收集数据")
-        except Exception:
-            pass
+    # ═══ 阶段检测 ═══
+    phase = "full"
+    min_days = 0
+    try:
+        from core.data_days import compute_collection_days
+        days_info = compute_collection_days()
+        min_days = days_info.get("per_stock_stats", {}).get("min_days", 0)
+        if min_days < 10:
+            phase = "cold_start"
+        elif min_days < 30:
+            phase = "warmup_stat"
+    except Exception:
+        pass
 
-    mode_label = "📊 DATA-ONLY (预热期)" if data_only else "🚀 FULL PIPELINE"
+    # --data-only 手动覆盖
+    if data_only:
+        phase = "cold_start"
+
+    PHASE_LABELS = {
+        "cold_start": "❄️ PHASE 1: COLD START (数据收集)",
+        "warmup_stat": "🔥 PHASE 2: WARM-UP STATISTICAL (评分+统计, 不交易)",
+        "full": "🚀 PHASE 3: FULL PIPELINE (完整闭环)",
+    }
+    mode_label = PHASE_LABELS.get(phase, "🚀 FULL PIPELINE")
 
     def step(name: str, status: str, detail: str = ""):
         steps.append({
@@ -82,7 +95,7 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
 
     print()
     print("═" * 50)
-    print(f"  {mode_label} v2.5 Final — 闭环启动")
+    print(f"  {mode_label} v2.6 — 闭环启动")
     print("═" * 50)
     ensure_output_dir()
 
@@ -126,24 +139,27 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
     print(f"  📅 交易日: {days_info['total_trading_days']}天 | min_days={days_info['per_stock_stats']['min_days']} | avg={days_info['per_stock_stats']['avg_days']}")
 
     # ═══════════════════════════════════════════════
-    # DATA-ONLY 模式: 到此为止, 跳过策略计算
+    # PHASE 1: COLD START — 到此为止, 跳过策略计算
     # ═══════════════════════════════════════════════
-    if data_only:
-        min_days = days_info.get("per_stock_stats", {}).get("min_days", 0)
-        remaining = max(0, 30 - min_days)
+    if phase == "cold_start":
+        remaining = max(0, 10 - min_days)
         report = {
             "date": now_cn().strftime("%Y-%m-%d"),
             "timestamp": now_cn().isoformat(),
-            "version": "2.5-final",
-            "pipeline_status": "DATA_ONLY",
-            "mode": "warmup",
+            "version": "2.6",
+            "pipeline_status": "COLD_START",
+            "phase": 1,
+            "mode": "cold_start",
             "registry_stats": stats,
             "universe_size": len(universe),
             "data_days": days_info,
             "warmup": {
                 "min_days": min_days,
+                "phase": 1,
+                "phase_label": "COLD START",
+                "next_phase_days": 10,
                 "target_days": 30,
-                "remaining_days": remaining,
+                "remaining_days": max(0, 30 - min_days),
                 "progress": f"{min_days}/30",
             },
         }
@@ -151,11 +167,136 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
         _save_log(steps, t0)
 
         print()
-        print(f"  📊 数据预热中: min_days={min_days}/30")
+        print(f"  ❄️ Phase 1 冷启动: min_days={min_days}/10")
         if remaining > 0:
-            print(f"  ⏳ 还需约 {remaining} 个交易日完成预热")
-        else:
-            print(f"  ✅ 预热完成! 下次运行将自动切换到完整 Pipeline")
+            print(f"  ⏳ 还需约 {remaining} 个交易日进入 Phase 2 (评分+统计)")
+        print("═" * 50)
+        return
+
+    # ═══════════════════════════════════════════════
+    # PHASE 2: WARM-UP STATISTICAL — 评分+信号+IC, 不交易
+    # ═══════════════════════════════════════════════
+    if phase == "warmup_stat":
+        logger.info(f"🔥 Phase 2 预热统计 (min_days={min_days}) — 评分+信号+IC, 不交易")
+
+        # ④ 市场状态
+        market_state = "UNKNOWN"
+        try:
+            from v2_final.strategy.market_state import get_market_state
+            market_state = get_market_state()
+            print(f"📡 ④ MARKET: {market_state}")
+            step("04_market", "ok", market_state)
+        except Exception as e:
+            step("04_market", "skip", str(e)[:30])
+
+        # ⑤ 数据获取 + ⑥⑦⑧ 评分
+        ranked = []
+        try:
+            from v2_final.data.provider import get_market_data
+            data = get_market_data()
+            n_stocks = len(data.get("stocks", []))
+            print(f"📡 ⑤ DATA: {n_stocks} 只全市场股票")
+            step("05_fetch", "ok" if n_stocks > 0 else "skip", f"{n_stocks} stocks")
+
+            if n_stocks >= 50:
+                from v2_final.strategy.sector import calc_sector_strength
+                from v2_final.strategy.sector_filter import get_strong_sectors, filter_stocks_by_sector
+
+                sector_rank = calc_sector_strength(data.get("sectors", {}))
+                strong_sectors = get_strong_sectors(data.get("sectors", {}), top_n=5)
+                print(f"🏭 ⑥ SECTOR: {len(strong_sectors)} 强行业")
+                step("06_sector", "ok", f"{len(strong_sectors)} strong sectors")
+
+                filtered = filter_stocks_by_sector(
+                    data["stocks"], strong_sectors,
+                    max_price=60, min_momentum=1.5,
+                )
+                print(f"🔍 ⑦ FILTER: {len(filtered)} 候选")
+                step("07_filter", "ok", f"{len(filtered)} candidates")
+
+                from v2_final.strategy.ranker import rank_stocks
+                ranked = rank_stocks(filtered, sector_rank, top_n=top_n * 4)
+                print(f"📊 ⑧ RANK: {len(ranked)} 只评分完成 (Phase 2: 不做组合配置)")
+                step("08_rank", "ok", f"{len(ranked)} ranked")
+
+                # ⑧b 信号记录 — Phase 2 核心价值: 积累信号用于 IC 计算
+                from core.signal_logger import log_signals
+                # ranked 没有 weight/price 字段, 补充
+                for r in ranked:
+                    r.setdefault("weight", 0)
+                log_signals(ranked, market_state)
+                step("08b_signal_log", "ok", f"{len(ranked)} signals logged")
+                print(f"  📝 信号已记录: {len(ranked)} 条 (用于 IC 计算)")
+            else:
+                step("08_rank", "skip", "insufficient data for scoring")
+                print("  ⚠️ 数据不足, 跳过评分 (下次 GH Actions 可能成功)")
+        except Exception as e:
+            step("05_fetch", "skip", str(e)[:30])
+            print(f"  ⚠️ 数据获取失败: {e}")
+
+        # ⑮ 前瞻收益回填 — 用已有信号计算 forward returns
+        try:
+            from analytics.forward_returns import compute as compute_fwd
+            compute_fwd()
+            step("15_fwd_returns", "ok", "forward returns computed")
+        except Exception as e:
+            step("15_fwd_returns", "skip", str(e)[:30])
+
+        # ⑯ IC + 分桶分析 — Phase 2 核心产出
+        ic_rpt = {}
+        bucket_rpt = {}
+        try:
+            from analytics.ic import ic_report
+            ic_rpt = ic_report()
+            step("16_ic", "ok", f"IC(5d)={ic_rpt.get('ic_5d',{}).get('ic','N/A')}")
+        except Exception as e:
+            step("16_ic", "skip", str(e)[:30])
+
+        try:
+            from analytics.bucket import bucket_report
+            bucket_rpt = bucket_report()
+            step("17_bucket", "ok", "bucket analysis done")
+        except Exception as e:
+            step("17_bucket", "skip", str(e)[:30])
+
+        # ═══ Phase 2 统计摘要 ═══
+        warmup_stats = _build_warmup_stats(ranked, ic_rpt, bucket_rpt)
+
+        remaining = max(0, 30 - min_days)
+        report = {
+            "date": now_cn().strftime("%Y-%m-%d"),
+            "timestamp": now_cn().isoformat(),
+            "version": "2.6",
+            "pipeline_status": "WARMUP_STAT",
+            "phase": 2,
+            "mode": "warmup_stat",
+            "registry_stats": stats,
+            "universe_size": len(universe),
+            "data_days": days_info,
+            "market_state": market_state,
+            "warmup": {
+                "min_days": min_days,
+                "phase": 2,
+                "phase_label": "WARM-UP STATISTICAL",
+                "next_phase_days": 30,
+                "target_days": 30,
+                "remaining_days": remaining,
+                "progress": f"{min_days}/30",
+            },
+            "warmup_stats": warmup_stats,
+        }
+        save_json(report, "daily_report.json")
+        _save_log(steps, t0)
+
+        print()
+        print(f"  🔥 Phase 2 预热统计: min_days={min_days}/30")
+        print(f"  📊 评分: {warmup_stats['score_count']} 只 | "
+              f"信号累计: {warmup_stats['signal_count']} 条")
+        if warmup_stats.get("ic_5d") is not None:
+            print(f"  📈 IC(5d): {warmup_stats['ic_5d']:+.4f} "
+                  f"({'🟢有效' if warmup_stats['ic_5d'] > 0.03 else '⏳积累中'})")
+        if remaining > 0:
+            print(f"  ⏳ 还需约 {remaining} 个交易日进入 Phase 3 (完整交易)")
         print("═" * 50)
         return
 
@@ -482,7 +623,7 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
     else:
         print(f"  ✅ {result['note']}")
     print("═" * 50)
-    print("  ✅ PIPELINE COMPLETE — v2.8")
+    print("  ✅ PIPELINE COMPLETE — v2.6")
     print("═" * 50)
 
 
@@ -492,7 +633,7 @@ def _save_log(steps: list, t0: datetime):
     elapsed = (now_cn() - t0).total_seconds()
 
     plog = {
-        "pipeline": "v2.5-final",
+        "pipeline": "v2.6",
         "started": t0.isoformat(),
         "elapsed_sec": round(elapsed, 1),
         "total": len(steps),
@@ -502,6 +643,73 @@ def _save_log(steps: list, t0: datetime):
     }
     save_json(plog, "pipeline_log.json")
     print(f"\n  ⏱ 耗时: {elapsed:.0f}s  |  {'✅ 全通过' if fail_count == 0 else f'❌ {fail_count} 失败'}")
+
+
+def _build_warmup_stats(ranked: list, ic_rpt: dict, bucket_rpt: dict) -> dict:
+    """Phase 2 统计摘要: score 分布 + 因子统计 + IC + 分桶"""
+    import numpy as np
+
+    stats = {
+        "score_count": len(ranked),
+        "score_distribution": [],
+        "factor_stats": {},
+        "top_stocks": [],
+        "ic_5d": None,
+        "rank_ic_5d": None,
+        "signal_count": 0,
+        "buckets": [],
+    }
+
+    if not ranked:
+        return stats
+
+    scores = [r.get("score", 0) for r in ranked]
+    trends = [r.get("trend", 0) for r in ranked]
+    flows = [r.get("flow", 0) for r in ranked]
+    values = [r.get("value", 0) for r in ranked]
+
+    # Score 分布 (4 桶)
+    dist_bins = [(0, 3, "0-3"), (3, 6, "3-6"), (6, 9, "6-9"), (9, 999, "9+")]
+    for lo, hi, label in dist_bins:
+        count = sum(1 for s in scores if lo <= s < hi)
+        stats["score_distribution"].append({"bucket": label, "count": count})
+
+    # 因子统计
+    for name, vals in [("trend", trends), ("flow", flows), ("value", values)]:
+        if vals:
+            stats["factor_stats"][name] = {
+                "mean": round(float(np.mean(vals)), 1),
+                "std": round(float(np.std(vals)), 1),
+                "min": round(float(np.min(vals)), 1),
+                "max": round(float(np.max(vals)), 1),
+            }
+
+    # Top 10
+    stats["top_stocks"] = [
+        {"code": r["code"], "name": r["name"], "score": r["score"],
+         "trend": r.get("trend", 0), "flow": r.get("flow", 0), "value": r.get("value", 0)}
+        for r in ranked[:10]
+    ]
+
+    # IC 摘要
+    ic5 = ic_rpt.get("ic_5d", {})
+    ric5 = ic_rpt.get("rank_ic_5d", {})
+    stats["ic_5d"] = ic5.get("ic")
+    stats["rank_ic_5d"] = ric5.get("rank_ic")
+    stats["ic_n"] = ic5.get("n", 0)
+    stats["ic_decay"] = ic_rpt.get("ic_decay", {})
+
+    # 信号总数
+    try:
+        from core.signal_logger import load_history
+        stats["signal_count"] = len(load_history())
+    except Exception:
+        pass
+
+    # 分桶
+    stats["buckets"] = bucket_rpt.get("buckets", [])
+
+    return stats
 
 
 if __name__ == "__main__":
