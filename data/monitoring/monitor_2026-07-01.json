@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-07-01T01:35:35.719248+08:00",
+  "date": "2026-07-01",
+  "checks": {
+    "score_drift": {
+      "status": "UNKNOWN",
+      "reason": "数据不足 (6 条)",
+      "drift": null
+    },
+    "ic_collapse": {
+      "status": "UNKNOWN",
+      "reason": "信号数据不足",
+      "ic": null
+    },
+    "win_rate": {
+      "status": "UNKNOWN",
+      "reason": "数据不足",
+      "drop": null
+    }
+  },
+  "overall": "HEALTHY",
+  "should_degrade": false,
+  "health_score": 100,
+  "recommendation": "系统健康, 继续运行"
+}

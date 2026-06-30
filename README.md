@@ -1,6 +1,6 @@
 # 🧭 RunDogRun V3 FINAL
 
-> **10万资金级别的交易行为约束系统 + 仓位风险引擎 + 最小统计验证闭环**
+> **统计收敛驱动交易系统 + 生命周期状态机 + 风险控制执行引擎**
 >
 > 不做预测 · 不做自动交易 · 不搞复杂模型
 
@@ -8,19 +8,56 @@
 
 ## 封版声明
 
-RunDogRun V3 FINAL is a rule-based trading system.
+RunDogRun V3 FINAL is a lifecycle-driven trading system.
 
-**Principles:**
-- No prediction
-- No machine learning
-- No dynamic strategy evolution
-- No indicator expansion
+**封版禁令 (永久):**
+- ❌ 不引入机器学习
+- ❌ 不做策略扩展
+- ❌ 不增加因子
+- ❌ 不做预测系统
+- ❌ 不改结构，只调参数
 
-**System evolves only via monthly parameter review.**
+**System evolves only via monthly parameter review in `config/params.yaml`.**
 
-Every trade must pass through the Decision Engine. Every signal is snapshot-locked. Every report follows the Standard Schema. No exceptions.
+Every trade must pass through the Decision Engine. Every signal is snapshot-locked. Every state transition is logged. No exceptions.
 
 ---
+
+## 四阶段状态机
+
+```
+COLLECT_ONLY → WARM_UP → ACTIVE → (MONITORING)
+                                  ↑         ↓
+                                  └── 降级 ──┘
+```
+
+| 阶段 | 行为 | 进入条件 |
+|------|------|---------|
+| COLLECT_ONLY | 只收数据 | days >= 10 → WARM_UP |
+| WARM_UP | 评分+信号+IC (不交易) | score稳定 + 信号≥50 + IC≥0 → ACTIVE |
+| ACTIVE | 完整交易闭环 | IC<0 或胜率突降 → WARM_UP |
+| MONITORING | 每7天防失效检查 | 检测到问题 → WARM_UP |
+
+## 核心模块
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| 状态机 | `core/state_machine.py` | 生命周期管理，决定行为许可 |
+| 决策引擎 | `execution/decision_engine.py` | 唯一决策入口，5种输出 |
+| 稳定性 | `stats/stability.py` | Score 均值/标准差漂移检测 |
+| 监控 | `report/monitor.py` | 防失效检查 (IC/胜率/漂移) |
+| 飞书推送 | `core/feishu_sender.py` | 每日决策卡推送 |
+| 配置 | `config/params.yaml` | 统一参数管理 |
+
+## 决策矩阵 (5 actions)
+
+| 条件 | 决策 |
+|------|------|
+| trend<50 or flow<45 or score<50 | EXIT 清仓退出 |
+| 50≤score<60 | REDUCE 减仓50% |
+| 60≤score<70 或 gates未通过 | NO_TRADE 观望不动 |
+| 70≤score<80 + gates pass | BUY_SMALL 小仓试单 |
+| score≥80 + gates pass | BUY_FULL 满仓买入 |
 
 ## 系统本质
 

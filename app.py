@@ -1,8 +1,8 @@
 """
-app.py — v2.8 收官展示层
+app.py — V3 FINAL 展示层
 ================================
 Pipeline → output/ → Streamlit 只读
-布局: 系统健康 → Markdown日报 → 微信版 → 下载 → 折叠详情
+布局: 状态机 → 系统健康 → Markdown日报 → 微信版 → 下载 → 折叠详情
 """
 import json
 import os
@@ -16,7 +16,7 @@ CN_TZ = timezone(timedelta(hours=8))
 def now_cn():
     return datetime.now(CN_TZ)
 
-st.set_page_config(page_title="RunDogRun", page_icon="📊", layout="wide")
+st.set_page_config(page_title="RunDogRun V3", page_icon="📊", layout="wide")
 
 # 移动端适配: 标题字号缩小
 st.markdown("""
@@ -50,7 +50,7 @@ def _read_json(filename: str) -> dict | None:
 
 # ═══════════════════════ 标题 ═══════════════════════
 now = now_cn()
-st.title("📊 RunDogRun 每日策略系统")
+st.title("📊 RunDogRun V3 每日策略系统")
 
 # 从 pipeline_log 取最后一次执行时间
 pipeline_log_raw = _read_json("pipeline_log.json")
@@ -58,7 +58,7 @@ if pipeline_log_raw:
     last_run = pipeline_log_raw.get("started", "")
     try:
         ts = datetime.fromisoformat(last_run)
-        st.caption(f"数据更新: {ts.strftime('%Y-%m-%d %H:%M')} · 页面刷新: {now.strftime('%H:%M')}")
+        st.caption(f"Pipeline 版本: {pipeline_log_raw.get('pipeline', 'v3.0')} · 数据更新: {ts.strftime('%Y-%m-%d %H:%M')} · 页面刷新: {now.strftime('%H:%M')}")
     except Exception:
         st.caption(f"页面刷新: {now.strftime('%Y-%m-%d %H:%M')}")
 else:
@@ -66,16 +66,52 @@ else:
 
 today_str = now.strftime("%Y-%m-%d")
 
-# ═══════════════════════ 阶段检测 (3-phase Smart Warm-up) ═══════════════════════
+# ═══════════════════════ 状态机检测 ═══════════════════════
 daily_report = _read_json("daily_report.json")
-_phase = 3  # 默认完整模式
+
+# 从 state_machine 字段或 pipeline_status 字段推断当前状态
+SM_EMOJI = {"COLLECT_ONLY": "❄️", "WARM_UP": "🔥", "ACTIVE": "🚀", "MONITORING": "🧠"}
+SM_LABELS = {
+    "COLLECT_ONLY": "冷启动: 仅数据收集",
+    "WARM_UP": "统计预热: 评分+IC, 不交易",
+    "ACTIVE": "实盘执行: 完整交易闭环",
+    "MONITORING": "监控中: 防失效检查",
+}
+
+_state = "COLLECT_ONLY"  # 默认
 if daily_report:
-    status = daily_report.get("pipeline_status", "")
-    if status in ("COLD_START", "DATA_ONLY"):  # DATA_ONLY = 向后兼容
-        _phase = 1
-    elif status == "WARMUP_STAT":
-        _phase = 2
-_is_warmup = _phase < 3
+    sm = daily_report.get("state_machine", {})
+    _state = sm.get("state", "")
+    if not _state:
+        # 向后兼容: 从 pipeline_status 推断
+        status = daily_report.get("pipeline_status", "")
+        if status in ("COLD_START", "DATA_ONLY", "COLLECT_ONLY"):
+            _state = "COLLECT_ONLY"
+        elif status in ("WARMUP_STAT", "WARM_UP"):
+            _state = "WARM_UP"
+        elif status in ("ACTIVE", "MONITORING"):
+            _state = "ACTIVE"
+        elif status == "SKIPPED":
+            _state = "ACTIVE"  # 假设已进入ACTIVE但跳过
+        else:
+            _state = "WARM_UP"  # 未知默认WARM_UP
+_is_warmup = _state in ("COLLECT_ONLY", "WARM_UP")
+_emoji = SM_EMOJI.get(_state, "❓")
+_label = SM_LABELS.get(_state, _state)
+
+# 状态机卡片
+with st.container():
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("🔁 系统状态", f"{_emoji} {_state}")
+    with c2:
+        st.metric("📡 交易状态", "观望/不交易" if _is_warmup else "🚀 可交易")
+    days_info = daily_report.get("data_days", {}) if daily_report else {}
+    with c3:
+        st.metric("📅 数据天数", f"{days_info.get('total_trading_days', 0)}天")
+    with c4:
+        min_d = days_info.get("per_stock_stats", {}).get("min_days", 0)
+        st.metric("📊 最少覆盖", f"{min_d}天")
 
 if _is_warmup:
     warmup = daily_report.get("warmup", {})
@@ -237,8 +273,14 @@ if daily_report and not _is_warmup:
     exec_data = daily_report.get("execution", {})
     if exec_data:
         st.divider()
+        # 决策颜色
+        decision_colors = {
+            "EXIT": "🔴", "REDUCE": "🟠", "NO_TRADE": "🟡",
+            "BUY_SMALL": "🟢", "BUY_FULL": "🟢",
+        }
+        dec = exec_data.get("decision", "NO_TRADE")
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("🎯 今日决策", f"{exec_data.get('emoji','')} {exec_data.get('decision','')}")
+        c1.metric("🎯 今日决策", f"{decision_colors.get(dec, '❓')} {dec}")
         factors = exec_data.get("factors", {})
         c2.metric("📈 趋势", f"{factors.get('trend',0):.0f}", delta="≥65可交易")
         c3.metric("💧 流动性", f"{factors.get('flow',0):.0f}", delta="≥55可交易")
@@ -247,11 +289,10 @@ if daily_report and not _is_warmup:
         if details:
             for d in details:
                 st.caption(d)
-        pa = exec_data.get("position_action", {})
-        if pa and pa.get("action") != "HOLD":
-            st.warning(f"⚠️ 仓位建议: {pa.get('reason','')}")
+        if exec_data.get("in_danger"):
+            st.error(f"⚠️ 风险警告: 当前决策 {dec} — 建议关注风险")
 
-    # v3 FINAL: 仓位 + 锁定
+    # V3 FINAL: 仓位 + 锁定
     pos_data = daily_report.get("position", {}) if daily_report else {}
     lock_data = daily_report.get("lock", {}) if daily_report else {}
     if pos_data or lock_data:
@@ -265,12 +306,20 @@ if daily_report and not _is_warmup:
                  delta="✅可改" if lock_data.get("can_modify") else "🔒锁定")
         c4.metric("📅 下次可改", lock_data.get("next_allowed", "-"))
 
+# ═══════════════════════ 状态机历史 ═══════════════════════
+sm = daily_report.get("state_machine", {}) if daily_report else {}
+hist = sm.get("history", [])
+if hist:
+    with st.expander(f"🔄 状态转换历史 ({len(hist)} 次)"):
+        for h in hist:
+            st.caption(f"{h.get('from','')} → {h.get('to','')} | {h.get('reason','')} | {h.get('timestamp','')[:16]}")
+
 st.divider()
 
 # ═══════════════════════ ② Markdown 日报 (核心展示) ═══════════════════════
 md_path = _read("daily_report.md")
 if _is_warmup:
-    st.info("📡 策略日报将在预热完成后 (min_days ≥ 30) 自动生成")
+    st.info(f"📡 {_emoji} {_label} — 策略日报将在进入 ACTIVE (信号≥50 + IC≥0 + score稳定) 后自动生成")
 elif md_path:
     with open(md_path, encoding="utf-8") as f:
         report_md = f.read()

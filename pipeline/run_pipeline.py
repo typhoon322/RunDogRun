@@ -1,16 +1,15 @@
 """
-pipeline/run_pipeline.py — v2.6 Smart Warm-up 流水线
-============================================================
+pipeline/run_pipeline.py — V3 FINAL 生命周期状态机驱动流水线
+===============================================================
 唯一执行入口: GitHub Actions 定时触发 → 本地也可手动运行
 
-三阶段智能预热:
-  Phase 1 — cold_start (min_days < 10):  仅数据收集 ①②③
-  Phase 2 — warmup_stat (10 ≤ min < 30): 数据+评分+信号+IC/分桶 (不交易)
-  Phase 3 — full (min_days ≥ 30):        完整闭环 (评分+回测+决策+推送)
+V3 FINAL 四阶段状态机:
+  COLLECT_ONLY → WARM_UP → ACTIVE → (MONITORING) → 降级回滚
+  STATE 决定行为, 不许绕过状态机
 
 用法:
   python pipeline/run_pipeline.py [--top 5] [--data-only]
-  --data-only: 强制 Phase 1 (跳过策略计算, 手动覆盖)
+  --data-only: 强制 COLLECT_ONLY (跳过策略计算)
 """
 import json
 import logging
@@ -53,38 +52,29 @@ def save_json(data: dict, filename: str):
 def run_pipeline(top_n: int = 5, data_only: bool = False):
     """主流水线 — 单次执行完成全部环节
 
-    三阶段智能预热:
-      Phase 1 cold_start:  min_days < 10,  仅数据收集
-      Phase 2 warmup_stat: 10 ≤ min < 30, 评分+信号+IC (不交易)
-      Phase 3 full:        min_days ≥ 30,  完整闭环
+    V3 FINAL: 行为由 core.state_machine 决定, 不允许绕过。
     """
+    from core.state_machine import (
+        load_state as load_sm_state, save_state, update_state, compute_stats,
+        should_run_monitoring, record_monitor_check, get_state_summary,
+        STATE_BEHAVIOR, COLLECT_ONLY, WARM_UP, ACTIVE, MONITORING,
+        STATE_EMOJI, STATE_LABELS,
+    )
+
     t0 = now_cn()
     steps = []
 
-    # ═══ 阶段检测 ═══
-    phase = "full"
-    min_days = 0
-    try:
-        from core.data_days import compute_collection_days
-        days_info = compute_collection_days()
-        min_days = days_info.get("per_stock_stats", {}).get("min_days", 0)
-        if min_days < 10:
-            phase = "cold_start"
-        elif min_days < 30:
-            phase = "warmup_stat"
-    except Exception:
-        pass
+    # ═══ 加载/初始化状态机 ═══
+    sm_state = load_sm_state()
+    current_state = sm_state["state"]
 
     # --data-only 手动覆盖
     if data_only:
-        phase = "cold_start"
+        current_state = COLLECT_ONLY
+    behavior = STATE_BEHAVIOR.get(current_state, STATE_BEHAVIOR[COLLECT_ONLY])
 
-    PHASE_LABELS = {
-        "cold_start": "❄️ PHASE 1: COLD START (数据收集)",
-        "warmup_stat": "🔥 PHASE 2: WARM-UP STATISTICAL (评分+统计, 不交易)",
-        "full": "🚀 PHASE 3: FULL PIPELINE (完整闭环)",
-    }
-    mode_label = PHASE_LABELS.get(phase, "🚀 FULL PIPELINE")
+    emoji = STATE_EMOJI.get(current_state, "❓")
+    label = STATE_LABELS.get(current_state, current_state)
 
     def step(name: str, status: str, detail: str = ""):
         steps.append({
@@ -94,9 +84,10 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
         })
 
     print()
-    print("═" * 50)
-    print(f"  {mode_label} v2.6 — 闭环启动")
-    print("═" * 50)
+    print("═" * 60)
+    print(f"  {emoji} {label} — V3 FINAL 状态机驱动")
+    print(f"  STATE: {current_state} | 允许交易: {'是' if behavior['execute_trade'] else '否'}")
+    print("═" * 60)
     ensure_output_dir()
 
     # ═══════════════════════════════════════════════
@@ -131,53 +122,60 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
         step("03_sync", "skip", "empty universe")
 
     # ═══════════════════════════════════════════════
-    # ③b 交易日统计 (data-only 模式必跑)
+    # ③b 交易日统计 (必跑)
     # ═══════════════════════════════════════════════
     from core.data_days import save_collection_days
     days_info = save_collection_days()
-    step("03b_data_days", "ok", f"{days_info['total_trading_days']} trading days, min={days_info['per_stock_stats']['min_days']}")
-    print(f"  📅 交易日: {days_info['total_trading_days']}天 | min_days={days_info['per_stock_stats']['min_days']} | avg={days_info['per_stock_stats']['avg_days']}")
+    min_days = days_info["per_stock_stats"]["min_days"]
+    step("03b_data_days", "ok", f"{days_info['total_trading_days']} trading days, min={min_days}")
+    print(f"  📅 交易日: {days_info['total_trading_days']}天 | min_days={min_days} | avg={days_info['per_stock_stats']['avg_days']}")
 
     # ═══════════════════════════════════════════════
-    # PHASE 1: COLD START — 到此为止, 跳过策略计算
+    # STATE: COLLECT_ONLY — 到此为止, 跳过策略计算
     # ═══════════════════════════════════════════════
-    if phase == "cold_start":
-        remaining = max(0, 10 - min_days)
+    if current_state == COLLECT_ONLY:
+        days_threshold = 10  # 从状态机取: min_days >= 10 可进入 WARM_UP
+
+        # 尝试状态转换
+        sm_stats = compute_stats(min_days=min_days)
+        new_sm = update_state(sm_stats)
+        new_state = new_sm["state"]
+
+        remaining = max(0, days_threshold - min_days)
         report = {
             "date": now_cn().strftime("%Y-%m-%d"),
             "timestamp": now_cn().isoformat(),
-            "version": "2.6",
-            "pipeline_status": "COLD_START",
-            "phase": 1,
-            "mode": "cold_start",
+            "version": "3.0-final",
+            "state_machine": get_state_summary(),
+            "pipeline_status": "COLLECT_ONLY",
             "registry_stats": stats,
             "universe_size": len(universe),
             "data_days": days_info,
             "warmup": {
                 "min_days": min_days,
-                "phase": 1,
-                "phase_label": "COLD START",
-                "next_phase_days": 10,
-                "target_days": 30,
-                "remaining_days": max(0, 30 - min_days),
-                "progress": f"{min_days}/30",
+                "target_days": days_threshold,
+                "remaining_days": remaining,
+                "progress": f"{min_days}/{days_threshold}",
+                "next_phase": "WARM_UP",
             },
         }
         save_json(report, "daily_report.json")
         _save_log(steps, t0)
 
         print()
-        print(f"  ❄️ Phase 1 冷启动: min_days={min_days}/10")
-        if remaining > 0:
-            print(f"  ⏳ 还需约 {remaining} 个交易日进入 Phase 2 (评分+统计)")
-        print("═" * 50)
+        print(f"  ❄️ COLLECT_ONLY: min_days={min_days}/{days_threshold}")
+        if new_state != COLLECT_ONLY:
+            print(f"  🎉 状态转换: COLLECT_ONLY → {new_state}")
+        elif remaining > 0:
+            print(f"  ⏳ 还需约 {remaining} 个交易日进入 WARM_UP (统计预热)")
+        print("═" * 60)
         return
 
     # ═══════════════════════════════════════════════
-    # PHASE 2: WARM-UP STATISTICAL — 评分+信号+IC, 不交易
+    # STATE: WARM_UP — 评分+信号+IC/分桶, 不交易
     # ═══════════════════════════════════════════════
-    if phase == "warmup_stat":
-        logger.info(f"🔥 Phase 2 预热统计 (min_days={min_days}) — 评分+信号+IC, 不交易")
+    if current_state == WARM_UP:
+        logger.info(f"🔥 WARM_UP (min_days={min_days}) — 评分+信号+IC, 不交易")
 
         # ④ 市场状态
         market_state = "UNKNOWN"
@@ -226,7 +224,7 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
                     r.setdefault("weight", 0)
                 log_signals(ranked, market_state)
                 step("08b_signal_log", "ok", f"{len(ranked)} signals logged")
-                print(f"  📝 信号已记录: {len(ranked)} 条 (用于 IC 计算)")
+                print(f"  📝 信号已记录: {len(ranked)} 条")
             else:
                 step("08_rank", "skip", "insufficient data for scoring")
                 print("  ⚠️ 数据不足, 跳过评分 (下次 GH Actions 可能成功)")
@@ -234,7 +232,7 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
             step("05_fetch", "skip", str(e)[:30])
             print(f"  ⚠️ 数据获取失败: {e}")
 
-        # ⑮ 前瞻收益回填 — 用已有信号计算 forward returns
+        # ⑮ 前瞻收益回填
         try:
             from analytics.forward_returns import compute as compute_fwd
             compute_fwd()
@@ -242,13 +240,15 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
         except Exception as e:
             step("15_fwd_returns", "skip", str(e)[:30])
 
-        # ⑯ IC + 分桶分析 — Phase 2 核心产出
+        # ⑯ IC + 分桶
         ic_rpt = {}
         bucket_rpt = {}
+        ic_val = None
         try:
             from analytics.ic import ic_report
             ic_rpt = ic_report()
-            step("16_ic", "ok", f"IC(5d)={ic_rpt.get('ic_5d',{}).get('ic','N/A')}")
+            ic_val = ic_rpt.get("ic_5d", {}).get("ic")
+            step("16_ic", "ok", f"IC(5d)={ic_val}")
         except Exception as e:
             step("16_ic", "skip", str(e)[:30])
 
@@ -259,46 +259,79 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
         except Exception as e:
             step("17_bucket", "skip", str(e)[:30])
 
-        # ═══ Phase 2 统计摘要 ═══
-        warmup_stats = _build_warmup_stats(ranked, ic_rpt, bucket_rpt)
+        # ═══ Score 稳定性 ═══
+        stability = {}
+        try:
+            from stats.stability import compute_stability
+            stability = compute_stability()
+            step("17b_stability", "ok" if stability.get("stable") else "skip",
+                 f"stable={stability.get('stable')}")
+        except Exception as e:
+            step("17b_stability", "skip", str(e)[:30])
 
-        remaining = max(0, 30 - min_days)
+        # ═══ 状态机: WARM_UP → ACTIVE? ═══
+        signal_count = 0
+        try:
+            from core.signal_logger import load_history
+            signal_count = len(load_history())
+        except Exception:
+            pass
+
+        sm_stats = compute_stats(
+            min_days=min_days,
+            signal_count=signal_count,
+            ic_5d=ic_val,
+        )
+        sm_stats["score_stable"] = stability.get("stable", False)
+
+        new_sm = update_state(sm_stats)
+        new_state = new_sm["state"]
+
+        # ═══ WARM_UP 统计摘要 ═══
+        warmup_stats = _build_warmup_stats(ranked, ic_rpt, bucket_rpt)
+        warmup_stats["stability"] = stability
+
         report = {
             "date": now_cn().strftime("%Y-%m-%d"),
             "timestamp": now_cn().isoformat(),
-            "version": "2.6",
-            "pipeline_status": "WARMUP_STAT",
-            "phase": 2,
-            "mode": "warmup_stat",
+            "version": "3.0-final",
+            "state_machine": get_state_summary(),
+            "pipeline_status": "WARM_UP",
             "registry_stats": stats,
             "universe_size": len(universe),
             "data_days": days_info,
             "market_state": market_state,
             "warmup": {
                 "min_days": min_days,
-                "phase": 2,
-                "phase_label": "WARM-UP STATISTICAL",
-                "next_phase_days": 30,
                 "target_days": 30,
-                "remaining_days": remaining,
+                "remaining_days": max(0, 30 - min_days),
                 "progress": f"{min_days}/30",
+                "next_phase": "ACTIVE",
             },
             "warmup_stats": warmup_stats,
+            "stability": stability,
         }
         save_json(report, "daily_report.json")
         _save_log(steps, t0)
 
         print()
-        print(f"  🔥 Phase 2 预热统计: min_days={min_days}/30")
+        print(f"  🔥 WARM_UP: min_days={min_days}")
         print(f"  📊 评分: {warmup_stats['score_count']} 只 | "
               f"信号累计: {warmup_stats['signal_count']} 条")
-        if warmup_stats.get("ic_5d") is not None:
-            print(f"  📈 IC(5d): {warmup_stats['ic_5d']:+.4f} "
-                  f"({'🟢有效' if warmup_stats['ic_5d'] > 0.03 else '⏳积累中'})")
-        if remaining > 0:
-            print(f"  ⏳ 还需约 {remaining} 个交易日进入 Phase 3 (完整交易)")
-        print("═" * 50)
+        if ic_val is not None:
+            q = "🟢有效" if ic_val > 0.03 else ("⏳积累中" if ic_val >= 0 else "🔴反向")
+            print(f"  📈 IC(5d): {ic_val:+.4f} {q}")
+        if stability.get("stable"):
+            print(f"  ✅ 稳定: drift={stability.get('mean_drift', '?')}")
+        if new_state != WARM_UP:
+            print(f"  🎉 状态转换: WARM_UP → {new_state}")
+        print("═" * 60)
         return
+
+    # ═══════════════════════════════════════════════
+    # STATE: ACTIVE/MONITORING — 完整交易闭环
+    # ═══════════════════════════════════════════════
+    logger.info(f"🚀 ACTIVE 完整交易 (min_days={min_days})")
 
     # ═══════════════════════════════════════════════
     # ④ 市场状态检查
@@ -314,7 +347,8 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
         report = {
             "date": now_cn().strftime("%Y-%m-%d"),
             "timestamp": now_cn().isoformat(),
-            "version": "2.5-final",
+            "version": "3.0-final",
+            "state_machine": get_state_summary(),
             "pipeline_status": "SKIPPED",
             "reason": "market NO_TRADE",
             "universe_size": len(universe),
@@ -501,8 +535,10 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
         "decision": decision["action"],
         "emoji": decision["emoji"],
         "can_buy": decision["allow_trade"],
-        "in_danger": decision["action"] == "NO_TRADE",
+        "can_hold": decision["allow_hold"],
+        "in_danger": decision["action"] in ("EXIT", "REDUCE"),
         "details": [decision["reason"]],
+        "position_change": decision["position_change"],
         "factors": {
             "trend": round(avg_trend, 1),
             "flow": round(avg_flow, 1),
@@ -570,7 +606,8 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
     # ═══════════════════════════════════════════════
     from analytics.ic import ic_report
     ic_rpt = ic_report()
-    step("16_ic", "ok", f"IC(5d)={ic_rpt.get('ic_5d',{}).get('ic',0)}")
+    ic_val = ic_rpt.get("ic_5d", {}).get("ic")
+    step("16_ic", "ok", f"IC(5d)={ic_val}")
 
     from analytics.bucket import bucket_report
     bucket_report()
@@ -589,7 +626,45 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
     step("19_standard_report", "ok", f"trades={std_report.get('system_health',{}).get('total_trades',0)}")
 
     # ═══════════════════════════════════════════════
-    # ⑳ V3 FINAL: 飞书决策卡推送
+    # ⑳ V3 FINAL: MONITORING 检查 (每7天)
+    # ═══════════════════════════════════════════════
+    monitor_result = None
+    try:
+        if should_run_monitoring():
+            from report.monitor import run_monitoring_check, print_monitor
+            monitor_result = run_monitoring_check()
+            record_monitor_check(monitor_result)
+            print_monitor(monitor_result)
+            step("20_monitoring", "ok", f"overall={monitor_result['overall']} "
+                 f"health={monitor_result['health_score']}")
+
+            # 如触发降级, 更新状态机
+            if monitor_result.get("should_degrade"):
+                sm_stats = compute_stats(
+                    min_days=min_days,
+                    ic_5d=ic_val,
+                )
+                sm_stats["performance_drop"] = True
+                new_sm = update_state(sm_stats)
+                print(f"  🚨 系统降级: ACTIVE → {new_sm['state']}")
+                step("20b_degrade", "warn", f"degraded to {new_sm['state']}")
+        else:
+            step("20_monitoring", "skip", "not due yet")
+    except Exception as e:
+        step("20_monitoring", "skip", str(e)[:30])
+
+    # ═══════════════════════════════════════════════
+    # ㉑ 状态机: ACTIVE 状态更新 + 降级检查
+    # ═══════════════════════════════════════════════
+    sm_stats = compute_stats(
+        min_days=min_days,
+        ic_5d=ic_val,
+    )
+    new_sm = update_state(sm_stats)
+    report["state_machine"] = get_state_summary()
+
+    # ═══════════════════════════════════════════════
+    # ㉒ V3 FINAL: 飞书决策卡推送
     # ═══════════════════════════════════════════════
     try:
         from core.feishu_sender import send_decision_card
@@ -601,12 +676,14 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
             decision=decision,
             position=position,
             market_state=market_state,
+            state=current_state,
+            ic_5d=ic_val,
         )
-        step("20_feishu", "ok" if ok else "fail", "pushed" if ok else "send failed")
+        step("22_feishu", "ok" if ok else "fail", "pushed" if ok else "send failed")
         if ok:
             print("  📡 飞书推送成功")
     except Exception as e:
-        step("20_feishu", "skip", str(e)[:30])
+        step("22_feishu", "skip", str(e)[:30])
         print(f"  📡 飞书推送跳过: {e}")
 
     # ═══════════════════════════════════════════════
@@ -622,9 +699,9 @@ def run_pipeline(top_n: int = 5, data_only: bool = False):
         print(f"  ⚡ {result['note']}")
     else:
         print(f"  ✅ {result['note']}")
-    print("═" * 50)
-    print("  ✅ PIPELINE COMPLETE — v2.6")
-    print("═" * 50)
+    print("═" * 60)
+    print("  ✅ PIPELINE COMPLETE — V3 FINAL 状态机驱动")
+    print("═" * 60)
 
 
 def _save_log(steps: list, t0: datetime):
@@ -633,7 +710,7 @@ def _save_log(steps: list, t0: datetime):
     elapsed = (now_cn() - t0).total_seconds()
 
     plog = {
-        "pipeline": "v2.6",
+        "pipeline": "v3.0-final",
         "started": t0.isoformat(),
         "elapsed_sec": round(elapsed, 1),
         "total": len(steps),

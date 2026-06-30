@@ -1,0 +1,52 @@
+# ═══════════════════════════════════════════════════════
+# RunDogRun V3 FINAL — 统一参数配置
+# 封版后只允许在此文件调整参数, 且必须在月度复盘窗口内
+# ═══════════════════════════════════════════════════════
+
+# ── 状态机阈值 ──
+state_machine:
+  # COLLECT_ONLY → WARM_UP
+  collect_only_min_days: 10        # 数据天数 >= 此值进入 WARM_UP
+
+  # WARM_UP → ACTIVE (三条件全部满足)
+  warmup_exit_signal_count: 50     # 累积信号数
+  warmup_exit_ic_min: 0.0          # IC 最低值 (>= 0 即有效)
+  warmup_exit_mean_drift_max: 0.05 # 近10日均值漂移 < 5%
+  warmup_exit_std_drift_max: 0.10  # 近10日标准差漂移 < 10%
+
+  # ACTIVE → WARM_UP (降级触发)
+  degrade_ic_threshold: 0.0        # IC < 0 触发降级
+  degrade_winrate_drop: 0.15       # 胜率突降 > 15% 触发降级
+  degrade_score_drift: 0.10        # Score 均值漂移 > 10% 告警
+
+  # 监控周期
+  monitor_check_interval_days: 7   # 每7天执行一次 MONITORING 检查
+
+# ── 决策引擎阈值 ──
+decision_engine:
+  trend_min: 65                    # 趋势最低线
+  flow_min: 55                     # 流动性最低线
+  system_score_buy: 70             # 系统买入线
+  system_score_strong: 80          # 可加仓线
+  system_score_caution: 60         # 减仓线
+  system_score_exit: 50            # 清仓线
+  trend_crash: 50                  # 趋势崩坏
+  flow_dry: 45                     # 流动性枯竭
+
+# ── 仓位管理 ──
+position:
+  max_total: 0.70                  # 总仓位上限 70%
+  single_risk: 0.10                # 单票风险上限 10%
+  compressed_max: 0.30             # 风险压缩下最大仓位
+  score_80_plus: 1.00              # 80+ 满仓 (受 max_total 约束)
+  score_75_80: 0.60                # 75-80 → 60%
+  score_70_75: 0.30                # 70-75 → 30%
+
+# ── 冷却机制 ──
+cooldown:
+  single_loss_days: 3              # 单次亏损冷却天数
+  triple_loss_days: 5              # 三连亏冷却天数
+
+# ── 月度锁定 ──
+monthly_lock:
+  review_interval_days: 30         # 参数修改窗口
