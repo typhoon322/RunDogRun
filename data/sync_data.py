@@ -36,6 +36,21 @@ def sync_stock(code: str, retries: int = 2) -> str | None:
     raise last_error
 
 
+def need_update(code: str) -> bool:
+    """检查是否需要更新数据"""
+    path = f"{DATA_DIR}/{code}.csv"
+    if not os.path.exists(path):
+        return True
+    if os.path.getsize(path) < 10:
+        return True
+    import pandas as pd
+    try:
+        df = pd.read_csv(path)
+        return len(df) < 150
+    except Exception:
+        return True
+
+
 def sync_universe(codes: list[str], max_new: int = 30) -> dict:
     """
     检查并补齐缺失数据。只处理新股票(最多 max_new 只避免API过载)。
