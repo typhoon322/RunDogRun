@@ -43,6 +43,13 @@ def rank_stocks(stocks: list[dict], sector_rank: list[dict] | None = None,
         price = float(s.get("price", 0) or 0)
         pe = float(s.get("pe", 0) or 0)
 
+        # NaN 防御
+        import math
+        if math.isnan(momentum) or math.isnan(volume) or math.isnan(price) or math.isnan(pe):
+            continue
+        if momentum <= 0 or volume <= 0 or price <= 0 or pe <= 0:
+            continue
+
         # 基础过滤
         if "ST" in name or "*" in name or "N" in name:
             continue
