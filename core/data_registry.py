@@ -171,7 +171,7 @@ class DataRegistry:
                 fwd = pos + h
                 if fwd < len(closes):
                     exit_px = float(closes.iloc[fwd])
-                    rets[f"ret_{h}d"] = round((exit_px / entry_px - 1), 4)
+                    rets[f"ret_{h}d"] = round((exit_px / entry_px - 1), 4) if entry_px > 0 else None
                 else:
                     rets[f"ret_{h}d"] = None
             results[sd_str] = rets

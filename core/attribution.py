@@ -41,7 +41,8 @@ def stock_attribution(
         })
 
     ranked = sorted(results, key=lambda x: x["contribution"], reverse=True)
-    logger.info(f"个股归因: {len(ranked)} 只, Top={ranked[0]['name']} {ranked[0]['contribution']:+.1f}%")
+    if ranked:
+        logger.info(f"个股归因: {len(ranked)} 只, Top={ranked[0]['name']} {ranked[0]['contribution']:+.1f}%")
     return ranked
 
 
@@ -87,7 +88,8 @@ def sector_attribution(
         })
 
     ranked = sorted(results, key=lambda x: x["total_contribution"], reverse=True)
-    logger.info(f"行业归因: {len(ranked)} 个行业, Top={ranked[0]['sector']}")
+    if ranked:
+        logger.info(f"行业归因: {len(ranked)} 个行业, Top={ranked[0]['sector']}")
     return ranked
 
 

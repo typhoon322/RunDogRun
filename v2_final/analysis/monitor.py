@@ -22,9 +22,13 @@ def calc_metrics(equity_curve: list[float]) -> dict[str, Any] | None:
 
     # 日收益率序列
     returns = [
-        (equity_curve[i] - equity_curve[i - 1]) / equity_curve[i - 1]
+        (equity_curve[i] - equity_curve[i - 1]) / equity_curve[i - 1] if equity_curve[i - 1] != 0 else 0
         for i in range(1, n)
     ]
+    # 去 NaN
+    returns = [r for r in returns if not (isinstance(r, float) and r != r)]
+    if not returns:
+        return None
 
     win_rate = sum(1 for r in returns if r > 0) / len(returns)
 
@@ -38,10 +42,10 @@ def calc_metrics(equity_curve: list[float]) -> dict[str, Any] | None:
     for v in equity_curve:
         if v > peak:
             peak = v
-        dd = (peak - v) / peak
+        dd = (peak - v) / peak if peak > 0 else 0
         max_dd = max(max_dd, dd)
 
-    total_return = round((equity_curve[-1] / equity_curve[0] - 1) * 100, 2)
+    total_return = round((equity_curve[-1] / equity_curve[0] - 1) * 100, 2) if equity_curve[0] > 0 else 0
 
     return {
         "total_return_pct": total_return,

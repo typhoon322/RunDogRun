@@ -108,7 +108,7 @@ def system_health_score() -> dict:
     # ═══════════════════════════════════════════
     if equity and equity.get("curve") and len(equity["curve"]) >= 5:
         curve = equity["curve"]
-        recent_return = curve[-1] / curve[-5] - 1 if len(curve) >= 5 else 0
+        recent_return = curve[-1] / curve[-5] - 1 if (len(curve) >= 5 and curve[-5] != 0) else 0
 
         if abs(recent_return) < 0.05:
             checks["stability"] = {"ok": True, "score": 25,

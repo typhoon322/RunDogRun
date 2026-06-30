@@ -33,14 +33,14 @@ def _today_return(equity_curve: list[float]) -> float:
     """计算最近一日收益率"""
     if not equity_curve or len(equity_curve) < 2:
         return 0.0
-    return (equity_curve[-1] / equity_curve[-2] - 1)
+    return (equity_curve[-1] / equity_curve[-2] - 1) if equity_curve[-2] != 0 else 0.0
 
 
 def _cumulative_return(equity_curve: list[float]) -> float:
     """累计收益率"""
     if not equity_curve or len(equity_curve) < 2:
         return 0.0
-    return equity_curve[-1] / equity_curve[0] - 1
+    return equity_curve[-1] / equity_curve[0] - 1 if equity_curve[0] != 0 else 0.0
 
 
 def _status_emoji(status: str) -> str:
@@ -266,7 +266,7 @@ def _build_wechat(
         sh_level = sys_health.get("level", "")
         wx += f"\n🧠 系统: {sh_score}/100 {sh_level}"
 
-    # v3 Lite 执行决策
+    # v3 FINAL 执行决策 (从 daily_report.json 读取)
     execution = daily.get("execution", {}) if daily else {}
     if execution:
         exec_emoji = execution.get("emoji", "")

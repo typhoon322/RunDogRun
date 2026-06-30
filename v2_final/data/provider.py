@@ -4,9 +4,25 @@ v2_final/data/provider.py — 统一数据接口
 AkShare 免费数据 → 统一归一化输出
 """
 import logging
+import math
 from typing import Any
 
 logger = logging.getLogger("v2.data")
+
+
+def _safe_float(x, default=0.0):
+    try:
+        v = float(x)
+        return v if not math.isnan(v) else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(x, default=0):
+    try:
+        return int(float(x))
+    except (TypeError, ValueError):
+        return default
 
 
 def get_market_data() -> dict[str, list[dict]]:
@@ -26,7 +42,7 @@ def get_market_data() -> dict[str, list[dict]]:
             row = df.tail(1).iloc[0]
             result["indices"] = [{
                 "code": "000001", "name": "上证指数",
-                "price": float(row["收盘"]), "change_pct": float(row["涨跌幅"]),
+                "price": _safe_float(row["收盘"]), "change_pct": _safe_float(row["涨跌幅"]),
             }]
     except Exception:
         pass
@@ -35,8 +51,8 @@ def get_market_data() -> dict[str, list[dict]]:
     try:
         df = ak.stock_board_industry_name_em()
         result["sectors"] = [
-            {"name": str(r["板块名称"]), "change_pct": float(r["涨跌幅"]),
-             "up_count": int(r.get("上涨家数", 0)), "down_count": int(r.get("下跌家数", 0)),
+            {"name": str(r["板块名称"]), "change_pct": _safe_float(r["涨跌幅"]),
+             "up_count": _safe_int(r.get("上涨家数", 0)), "down_count": _safe_int(r.get("下跌家数", 0)),
              "leader": str(r.get("领涨股票", ""))}
             for _, r in df.iterrows()
         ]
@@ -48,10 +64,10 @@ def get_market_data() -> dict[str, list[dict]]:
         df = ak.stock_zh_a_spot_em()
         result["stocks"] = [
             {"code": str(r["代码"]), "name": str(r["名称"]),
-             "price": float(r["最新价"]), "change_pct": float(r["涨跌幅"]),
-             "volume": float(r["成交量"]), "amount": float(r["成交额"]),
-             "turnover": float(r.get("换手率", 0)), "pe": float(r.get("市盈率-动态", 0)),
-             "mcap": float(r.get("总市值", 0)) / 1e8}
+             "price": _safe_float(r["最新价"]), "change_pct": _safe_float(r["涨跌幅"]),
+             "volume": _safe_float(r["成交量"]), "amount": _safe_float(r["成交额"]),
+             "turnover": _safe_float(r.get("换手率", 0)), "pe": _safe_float(r.get("市盈率-动态", 0)),
+             "mcap": _safe_float(r.get("总市值", 0)) / 1e8}
             for _, r in df.iterrows()
         ]
     except Exception:

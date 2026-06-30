@@ -56,7 +56,11 @@ def _metrics(equity: list[float]) -> dict[str, Any]:
         if v > peak: peak = v
         dd = (peak - v) / peak
         max_dd = max(max_dd, dd)
-    returns = [(equity[i] - equity[i - 1]) / equity[i - 1] for i in range(1, n)]
+    returns = [(equity[i] - equity[i - 1]) / equity[i - 1] if equity[i - 1] != 0 else 0
+               for i in range(1, n)]
+    returns = [r for r in returns if not (isinstance(r, float) and (r != r))]  # 去 NaN
+    if not returns:
+        return {"total_return": 0, "max_drawdown": 0, "sharpe": 0, "win_rate": 0}
     wr = round(sum(1 for r in returns if r > 0) / len(returns), 2)
     avg = sum(returns) / len(returns)
     var = sum((r - avg) ** 2 for r in returns) / len(returns)

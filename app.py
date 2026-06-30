@@ -41,8 +41,11 @@ def _read(filename: str):
 def _read_json(filename: str) -> dict | None:
     p = _read(filename)
     if p:
-        with open(p) as f:
-            return json.load(f)
+        try:
+            with open(p, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return None
     return None
 
 # ═══════════════════════ 标题 ═══════════════════════

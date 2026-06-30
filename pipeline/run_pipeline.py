@@ -228,7 +228,7 @@ def run_pipeline(top_n: int = 5):
 
     avg_trend = sum(trends) / len(trends) if trends else 50
     avg_flow = sum(flows) / len(flows) if flows else 50
-    avg_score = sum(p["score"] for p in portfolio) / len(portfolio) if portfolio else 0
+    avg_score = sum(p.get("score", 0) for p in portfolio) / len(portfolio) if portfolio else 0
 
     # 归一化 score 到 0-100 区间
     norm_score = min(100, max(0, avg_score / 12.0 * 100)) if portfolio else 0

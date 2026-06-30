@@ -57,6 +57,9 @@ def allocate_portfolio(
         for p in portfolio:
             p["weight"] = round(p["weight"] / new_total, 3)
 
-    logger.info(f"组合: {len(portfolio)} 只 "
-                f"(Top: {portfolio[0]['name']} {portfolio[0]['weight']:.0%})")
+    if portfolio:
+        logger.info(f"组合: {len(portfolio)} 只 "
+                    f"(Top: {portfolio[0]['name']} {portfolio[0]['weight']:.0%})")
+    else:
+        logger.warning("组合为空: 所有候选权重低于 min_single")
     return portfolio
