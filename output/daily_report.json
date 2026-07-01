@@ -1,12 +1,29 @@
 {
   "date": "2026-07-01",
-  "timestamp": "2026-07-01T01:05:34.124277+08:00",
-  "version": "2.6",
-  "pipeline_status": "COLD_START",
-  "phase": 1,
-  "mode": "cold_start",
+  "timestamp": "2026-07-01T20:14:57.462058+08:00",
+  "version": "3.0-final",
+  "state_machine": {
+    "state": "COLLECT_ONLY",
+    "state_emoji": "❄️",
+    "state_label": "PHASE 1: COLD START (数据收集)",
+    "entered_at": "2026-07-01T01:35:51.340121+08:00",
+    "degradation_count": 0,
+    "monitor_checks": 0,
+    "last_monitor_check": null,
+    "behavior": {
+      "collect_data": true,
+      "compute_score": false,
+      "generate_signal": false,
+      "run_decision": false,
+      "execute_trade": false,
+      "monitor": false
+    },
+    "can_trade": false,
+    "history": []
+  },
+  "pipeline_status": "COLLECT_ONLY",
   "registry_stats": {
-    "total_csv": 494,
+    "total_csv": 497,
     "loaded_into_memory": 0,
     "bad_files": 0,
     "coverage_pct": 0.0,
@@ -20,25 +37,23 @@
   },
   "universe_size": 300,
   "data_days": {
-    "csv_count": 497,
-    "total_trading_days": 192,
-    "date_range": "2025-09-09 ~ 2026-06-30",
+    "csv_count": 547,
+    "total_trading_days": 193,
+    "date_range": "2025-09-09 ~ 2026-07-01",
     "first_date": "2025-09-09",
-    "last_date": "2026-06-30",
-    "updated_at": "2026-07-01T01:05:34.123747+08:00",
+    "last_date": "2026-07-01",
+    "updated_at": "2026-07-01T20:14:57.444992+08:00",
     "per_stock_stats": {
       "max_days": 180,
       "min_days": 3,
-      "avg_days": 179.3
+      "avg_days": 179.4
     }
   },
   "warmup": {
     "min_days": 3,
-    "phase": 1,
-    "phase_label": "COLD START",
-    "next_phase_days": 10,
-    "target_days": 30,
-    "remaining_days": 27,
-    "progress": "3/30"
+    "target_days": 10,
+    "remaining_days": 7,
+    "progress": "3/10",
+    "next_phase": "WARM_UP"
   }
 }
