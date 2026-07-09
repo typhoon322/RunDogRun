@@ -1,10 +1,10 @@
 {
-  "csv_count": 812,
-  "total_trading_days": 202,
-  "date_range": "2025-09-03 ~ 2026-07-08",
+  "csv_count": 823,
+  "total_trading_days": 203,
+  "date_range": "2025-09-03 ~ 2026-07-09",
   "first_date": "2025-09-03",
-  "last_date": "2026-07-08",
-  "updated_at": "2026-07-08T19:09:28.231745+08:00",
+  "last_date": "2026-07-09",
+  "updated_at": "2026-07-09T20:08:57.064409+08:00",
   "per_stock_stats": {
     "max_days": 180,
     "min_days": 4,
