@@ -1,6 +1,6 @@
 {
-  "date": "2026-09-03",
-  "timestamp": "2026-09-03T21:22:52.701653+08:00",
+  "date": "2026-09-04",
+  "timestamp": "2026-09-04T21:17:15.817284+08:00",
   "version": "3.0-final",
   "state_machine": {
     "state": "COLLECT_ONLY",
@@ -23,7 +23,7 @@
   },
   "pipeline_status": "COLLECT_ONLY",
   "registry_stats": {
-    "total_csv": 1014,
+    "total_csv": 1034,
     "loaded_into_memory": 0,
     "bad_files": 0,
     "coverage_pct": 0.0,
@@ -37,12 +37,12 @@
   },
   "universe_size": 300,
   "data_days": {
-    "csv_count": 1034,
-    "total_trading_days": 243,
-    "date_range": "2025-09-03 ~ 2026-09-03",
+    "csv_count": 1035,
+    "total_trading_days": 244,
+    "date_range": "2025-09-03 ~ 2026-09-04",
     "first_date": "2025-09-03",
-    "last_date": "2026-09-03",
-    "updated_at": "2026-09-03T21:22:52.692126+08:00",
+    "last_date": "2026-09-04",
+    "updated_at": "2026-09-04T21:17:15.799625+08:00",
     "per_stock_stats": {
       "max_days": 180,
       "min_days": 4,
