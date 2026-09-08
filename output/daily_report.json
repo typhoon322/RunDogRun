@@ -1,6 +1,6 @@
 {
-  "date": "2026-09-07",
-  "timestamp": "2026-09-07T22:54:47.460748+08:00",
+  "date": "2026-09-08",
+  "timestamp": "2026-09-08T21:25:03.990783+08:00",
   "version": "3.0-final",
   "state_machine": {
     "state": "COLLECT_ONLY",
@@ -42,7 +42,7 @@
     "date_range": "2025-09-03 ~ 2026-09-04",
     "first_date": "2025-09-03",
     "last_date": "2026-09-04",
-    "updated_at": "2026-09-07T22:54:47.443086+08:00",
+    "updated_at": "2026-09-08T21:25:03.977404+08:00",
     "per_stock_stats": {
       "max_days": 180,
       "min_days": 4,
