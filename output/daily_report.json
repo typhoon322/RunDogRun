@@ -1,6 +1,6 @@
 {
-  "date": "2026-09-14",
-  "timestamp": "2026-09-14T23:47:03.689366+08:00",
+  "date": "2026-09-15",
+  "timestamp": "2026-09-15T22:14:50.188861+08:00",
   "version": "3.0-final",
   "state_machine": {
     "state": "COLLECT_ONLY",
@@ -37,12 +37,12 @@
   },
   "universe_size": 300,
   "data_days": {
-    "csv_count": 1062,
-    "total_trading_days": 247,
-    "date_range": "2025-09-03 ~ 2026-09-09",
+    "csv_count": 1065,
+    "total_trading_days": 251,
+    "date_range": "2025-09-03 ~ 2026-09-15",
     "first_date": "2025-09-03",
-    "last_date": "2026-09-09",
-    "updated_at": "2026-09-14T23:47:03.678515+08:00",
+    "last_date": "2026-09-15",
+    "updated_at": "2026-09-15T22:14:50.171940+08:00",
     "per_stock_stats": {
       "max_days": 180,
       "min_days": 4,
