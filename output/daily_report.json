@@ -1,6 +1,6 @@
 {
-  "date": "2026-10-26",
-  "timestamp": "2026-10-26T23:58:27.115257+08:00",
+  "date": "2026-10-27",
+  "timestamp": "2026-10-27T23:13:06.777286+08:00",
   "version": "3.0-final",
   "state_machine": {
     "state": "COLLECT_ONLY",
@@ -23,7 +23,7 @@
   },
   "pipeline_status": "COLLECT_ONLY",
   "registry_stats": {
-    "total_csv": 1248,
+    "total_csv": 1249,
     "loaded_into_memory": 0,
     "bad_files": 0,
     "coverage_pct": 0.0,
@@ -42,7 +42,7 @@
     "date_range": "2025-09-03 ~ 2026-10-26",
     "first_date": "2025-09-03",
     "last_date": "2026-10-26",
-    "updated_at": "2026-10-26T23:58:27.100988+08:00",
+    "updated_at": "2026-10-27T23:13:06.759206+08:00",
     "per_stock_stats": {
       "max_days": 180,
       "min_days": 1,

@@ -1,7 +1,7 @@
 {
   "pipeline": "v3.0-final",
-  "started": "2026-10-26T23:57:25.178150+08:00",
-  "elapsed_sec": 61.9,
+  "started": "2026-10-27T23:12:06.369864+08:00",
+  "elapsed_sec": 60.4,
   "total": 4,
   "ok_count": 4,
   "fail_count": 0,
@@ -9,26 +9,26 @@
     {
       "step": "01_registry",
       "status": "ok",
-      "detail": "1248 CSV",
-      "time": "23:57:25"
+      "detail": "1249 CSV",
+      "time": "23:12:06"
     },
     {
       "step": "02_universe",
       "status": "ok",
       "detail": "300 stocks",
-      "time": "23:58:22"
+      "time": "23:13:02"
     },
     {
       "step": "03_sync",
       "status": "ok",
       "detail": "synced for 300 codes",
-      "time": "23:58:26"
+      "time": "23:13:05"
     },
     {
       "step": "03b_data_days",
       "status": "ok",
       "detail": "274 trading days, min=1",
-      "time": "23:58:27"
+      "time": "23:13:06"
     }
   ]
 }
